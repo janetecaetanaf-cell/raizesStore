@@ -23,6 +23,7 @@ const AdminPedidos = () => {
 
   useEffect(() => {
     carregarPedidos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFiltro]);
 
   const carregarPedidos = async () => {

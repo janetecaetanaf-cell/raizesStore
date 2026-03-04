@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Button, Form, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiChevronDown, FiEye } from 'react-icons/fi';
+import { FiChevronDown, FiEye } from 'react-icons/fi';
 import api from '../services/api';
 import { Produto, Categoria, TipoProduto } from '../types';
 import { Icon } from '../components/Icon';
@@ -24,10 +24,12 @@ const Home = () => {
   useEffect(() => {
     carregarCategorias();
     carregarProdutos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     carregarProdutos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoriaSelecionada, tipoSelecionado]);
 
   // Efeito parallax
