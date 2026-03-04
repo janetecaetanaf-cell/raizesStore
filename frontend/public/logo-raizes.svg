@@ -1,0 +1,30 @@
+<svg width="180" height="100" viewBox="0 0 180 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Camiseta estilizada -->
+  <g id="camiseta">
+    <!-- Lado esquerdo da camiseta (visível) -->
+    <path d="M 20 20 L 20 30 Q 20 35 22 40 Q 24 45 25 50 Q 26 55 25 60 Q 24 65 22 70 Q 20 75 20 80" 
+          stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Manga esquerda -->
+    <path d="M 20 25 Q 15 23 12 25 Q 10 27 12 30 Q 14 32 18 30" 
+          stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Linhas internas (dobras) -->
+    <path d="M 22 35 Q 23 40 22 45" stroke="#000000" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M 23 50 Q 24 55 23 60" stroke="#000000" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M 22 65 Q 21 70 20 75" stroke="#000000" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    
+    <!-- Borda direita cortada (linha vertical reta) -->
+    <line x1="50" y1="20" x2="50" y2="80" stroke="#000000" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Texto "RAÍZES" vertical (lê de baixo para cima) -->
+  <text x="60" y="80" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#000000" transform="rotate(-90 60 80)" text-anchor="middle">
+    RAÍZES
+  </text>
+  
+  <!-- Texto "STORE" abaixo -->
+  <text x="90" y="90" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#000000" text-anchor="middle">
+    STORE
+  </text>
+</svg>

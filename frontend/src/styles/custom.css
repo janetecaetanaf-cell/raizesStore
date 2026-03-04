@@ -1,0 +1,408 @@
+/* Importação da fonte Mokoto */
+@font-face {
+  font-family: 'Mokoto';
+  src: url('../fonts/Mokoto-Demo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --primary-color: #0d6efd;
+  --secondary-color: #198754;
+  --accent-color: #ffc107;
+  --dark-color: #212529;
+  --light-bg: #f8f9fa;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--light-bg);
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--dark-color) !important;
+}
+
+.navbar-brand:hover {
+  color: var(--primary-color) !important;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent !important;
+}
+
+.logo-svg {
+  height: 120px;
+  width: auto;
+  background: transparent !important;
+  display: block;
+}
+
+.navbar-brand {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+
+.product-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.product-image {
+  height: 250px;
+  object-fit: cover;
+  width: 100%;
+}
+
+.product-card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #6B5238;
+}
+
+.btn-primary {
+  background-color: #6B5238;
+  border-color: #6B5238;
+  font-weight: 600;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+}
+
+.btn-primary:hover {
+  background-color: #5A4530;
+  border-color: #5A4530;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(107, 82, 56, 0.4);
+}
+
+.btn-success {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  font-weight: 600;
+}
+
+.btn-success:hover {
+  background-color: #157347;
+  border-color: #157347;
+}
+
+.card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: white !important;
+}
+
+.footer {
+  background-color: var(--dark-color);
+  color: white;
+  margin-top: 4rem;
+  position: relative;
+}
+
+/* Seção de vídeo no rodapé */
+.footer-video-section {
+  position: relative;
+  width: 100%;
+  min-height: 120px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-video-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(1.2) contrast(1.3);
+  pointer-events: none;
+}
+
+.footer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1;
+}
+
+.footer-content {
+  position: relative;
+  z-index: 2;
+  padding: 1rem 0;
+}
+
+.footer-text {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.7);
+}
+
+.footer-text h5 {
+  font-family: 'Mokoto', 'Orbitron', sans-serif;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  background-color: #6B5238 !important;
+  border-color: #6B5238 !important;
+  color: white !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.hero-section {
+  position: relative;
+  padding: 6rem 0;
+  margin-bottom: 3rem;
+  overflow: hidden;
+  min-height: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  width: 100%;
+  max-width: 100%;
+}
+
+.hero-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  z-index: 0;
+  object-fit: cover;
+  /* Transição suave para o efeito parallax */
+  transition: transform 0.1s ease-out;
+  /* Permite que o vídeo seja maior para melhor efeito parallax */
+  min-width: 120%;
+  min-height: 120%;
+  /* Clareia o vídeo principal */
+  filter: brightness(1.3) contrast(1.2);
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  /* Transição suave para o efeito parallax */
+  transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+/* Container para o título com vídeo de fundo */
+.hero-title-container {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  overflow: visible;
+  width: 100%;
+}
+
+/* Vídeo de fundo que aparece através do texto */
+.hero-title-video-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100%;
+  min-width: 100vw;
+  min-height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(1.2) contrast(1.3);
+  pointer-events: none;
+  /* Centraliza na viewport - cobre toda a largura da página */
+  left: 50vw;
+  margin-left: calc(-50vw + 50%);
+}
+
+/* Título com efeito de texto vazado */
+.hero-title {
+  font-size: 4.5rem;
+  font-weight: 900;
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  z-index: 1;
+  overflow: visible;
+}
+
+/* Texto transparente - similar ao subtítulo */
+.hero-title-text {
+  position: relative;
+  display: inline-block;
+  /* Aplica a fonte Mokoto */
+  font-family: 'Mokoto', 'Orbitron', sans-serif;
+  /* Texto branco transparente - sem fundo */
+  color: rgba(255, 255, 255, 0.95);
+  /* Remove contorno */
+  -webkit-text-stroke: 0;
+  /* Sombra sutil para legibilidade */
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+  font-weight: 400;
+  opacity: 1;
+  background: transparent;
+  /* Ajusta o espaçamento das letras para melhor visualização */
+  letter-spacing: 2px;
+}
+
+/* Fallback para navegadores que não suportam background-clip: text */
+@supports not (-webkit-background-clip: text) {
+  .hero-title {
+    color: white;
+    -webkit-text-fill-color: white;
+    text-shadow: 
+      0 0 20px rgba(255, 255, 255, 0.8),
+      0 0 40px rgba(255, 255, 255, 0.6),
+      0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+}
+
+.hero-subtitle {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 15px rgba(0, 0, 0, 0.7);
+  font-weight: 400;
+  margin-top: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Botão para scroll até produtos */
+.hero-scroll-button {
+  position: relative;
+  z-index: 2;
+  margin-top: 2rem;
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  color: white;
+  transition: all 0.3s ease;
+  border-radius: 50px;
+}
+
+.hero-scroll-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: white;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+}
+
+.hero-scroll-button:focus {
+  box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.5);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .hero-title-text {
+    font-size: inherit;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .hero-section {
+    min-height: 400px;
+    padding: 4rem 0;
+  }
+}
+
+.stats-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.table {
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: var(--light-bg);
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+}
