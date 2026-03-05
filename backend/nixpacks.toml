@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["dotnet-sdk_8", "dotnet-runtime_8"]
+nixPkgs = ["dotnet-sdk_8"]
 
 [phases.build]
 cmds = ["dotnet publish RaizesStore.Api/RaizesStore.Api.csproj -c Release -o /app/publish"]
