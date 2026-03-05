@@ -32,6 +32,7 @@ const AdminProdutos = () => {
     imagens: [] as string[],
   });
   const [novaImagem, setNovaImagem] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
 
   useEffect(() => {
@@ -276,6 +277,49 @@ const AdminProdutos = () => {
       });
       setNovaImagem('');
     }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      mostrarAlert('danger', 'Por favor, selecione apenas arquivos de imagem');
+      return;
+    }
+
+    // Validar tamanho (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      mostrarAlert('danger', 'A imagem deve ter no máximo 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Converter para base64 e usar como data URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setProdutoForm({
+          ...produtoForm,
+          imagens: [...produtoForm.imagens, base64String],
+        });
+        setUploadingImage(false);
+        mostrarAlert('success', 'Imagem adicionada com sucesso!');
+      };
+      reader.onerror = () => {
+        mostrarAlert('danger', 'Erro ao ler a imagem');
+        setUploadingImage(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      mostrarAlert('danger', `Erro ao fazer upload: ${error.message}`);
+      setUploadingImage(false);
+    }
+    
+    // Limpar o input
+    event.target.value = '';
   };
 
   const removerImagem = (index: number) => {
@@ -644,23 +688,46 @@ const AdminProdutos = () => {
             )}
 
             <Form.Group className="mb-3">
-              <Form.Label>Imagens (URLs ou caminhos locais)</Form.Label>
-              <Form.Text className="text-muted d-block mb-2">
-                Para imagens na pasta <code>public</code>, use: <code>/nome-da-imagem.jpg</code>
-                <br />
-                Exemplo: Se a imagem está em <code>public/produtos/camiseta.jpg</code>, digite: <code>/produtos/camiseta.jpg</code>
-              </Form.Text>
-              <div className="d-flex gap-2 mb-2">
+              <Form.Label>Imagens do Produto</Form.Label>
+              
+              {/* Upload de arquivo */}
+              <div className="mb-3">
+                <Form.Label className="fw-bold">📤 Fazer Upload de Imagem</Form.Label>
                 <Form.Control
-                  type="text"
-                  value={novaImagem}
-                  onChange={(e) => setNovaImagem(e.target.value)}
-                  placeholder="/produtos/imagem.jpg ou https://exemplo.com/imagem.jpg"
-                  onKeyPress={(e) => e.key === 'Enter' && adicionarImagem()}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="mb-2"
                 />
-                <Button variant="outline-primary" onClick={adicionarImagem}>
-                  Adicionar
-                </Button>
+                {uploadingImage && (
+                  <small className="text-muted">Processando imagem...</small>
+                )}
+                <Form.Text className="text-muted d-block">
+                  Selecione uma imagem do seu computador (máximo 5MB)
+                </Form.Text>
+              </div>
+
+              {/* Ou inserir URL manualmente */}
+              <div className="mb-3">
+                <Form.Label className="fw-bold">🔗 Ou inserir URL manualmente</Form.Label>
+                <Form.Text className="text-muted d-block mb-2">
+                  Para imagens na pasta <code>public</code>, use: <code>/nome-da-imagem.jpg</code>
+                  <br />
+                  Exemplo: Se a imagem está em <code>public/produtos/camiseta.jpg</code>, digite: <code>/produtos/camiseta.jpg</code>
+                </Form.Text>
+                <div className="d-flex gap-2 mb-2">
+                  <Form.Control
+                    type="text"
+                    value={novaImagem}
+                    onChange={(e) => setNovaImagem(e.target.value)}
+                    placeholder="/produtos/imagem.jpg ou https://exemplo.com/imagem.jpg"
+                    onKeyPress={(e) => e.key === 'Enter' && adicionarImagem()}
+                  />
+                  <Button variant="outline-primary" onClick={adicionarImagem}>
+                    Adicionar
+                  </Button>
+                </div>
               </div>
               {produtoForm.imagens.length > 0 && (
                 <div className="mt-2">
