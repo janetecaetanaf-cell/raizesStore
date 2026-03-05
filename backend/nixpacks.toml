@@ -2,7 +2,9 @@
 nixPkgs = ["dotnet-sdk_8"]
 
 [phases.build]
-cmds = ["dotnet publish RaizesStore.Api/RaizesStore.Api.csproj -c Release -o /app/publish"]
+cmds = [
+  "dotnet publish RaizesStore.Api/RaizesStore.Api.csproj -c Release -o /app/publish --self-contained false"
+]
 
 [start]
-cmd = "cd /app/publish && dotnet RaizesStore.Api.dll"
+cmd = "dotnet /app/publish/RaizesStore.Api.dll"
