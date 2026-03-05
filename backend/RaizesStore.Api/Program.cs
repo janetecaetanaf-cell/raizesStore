@@ -56,7 +56,7 @@ builder.Services.AddSwaggerGen();
             var uri = new Uri(databaseUrl);
             var dbName = uri.LocalPath.TrimStart('/');
             var userInfo = uri.UserInfo.Split(':');
-            connectionString = $"Host={uri.Host};Port={uri.Port};Database={dbName};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;";
+            connectionString = $"Host={uri.Host};Port={uri.Port};Database={dbName};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
             Console.WriteLine($"Conectando ao banco: {uri.Host}:{uri.Port}/{dbName}");
         }
         catch (Exception ex)
