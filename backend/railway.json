@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "cd /app && dotnet RaizesStore.Api.dll",
+    "startCommand": "cd /app/publish && dotnet RaizesStore.Api.dll",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
