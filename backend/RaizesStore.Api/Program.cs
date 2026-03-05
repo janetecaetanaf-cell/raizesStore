@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using RaizesStore.Infrastructure.Data;
-using System.Threading;
 
 // Configurar tratamento global de exceções não tratadas
 AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
@@ -136,30 +135,19 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
             
             logger.LogInformation("Verificando migrations do banco de dados...");
             
-            // Tentar conectar primeiro
-            var maxRetries = 5;
-            var retryCount = 0;
+            // Tentar conectar
             var connected = false;
-            
-            while (retryCount < maxRetries && !connected)
+            try
             {
-                try
+                connected = dbContext.Database.CanConnect();
+                if (connected)
                 {
-                    connected = dbContext.Database.CanConnect();
-                    if (connected)
-                    {
-                        logger.LogInformation("Conexão com o banco de dados estabelecida com sucesso.");
-                    }
+                    logger.LogInformation("Conexão com o banco de dados estabelecida com sucesso.");
                 }
-                catch (Exception connectEx)
-                {
-                    retryCount++;
-                    logger.LogWarning($"Tentativa {retryCount}/{maxRetries} de conexão falhou: {connectEx.Message}");
-                    if (retryCount < maxRetries)
-                    {
-                        Thread.Sleep(2000); // Aguarda 2 segundos antes de tentar novamente
-                    }
-                }
+            }
+            catch (Exception connectEx)
+            {
+                logger.LogWarning($"Não foi possível conectar ao banco de dados: {connectEx.Message}");
             }
             
             if (connected)
