@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RaizesStore.Infrastructure.Data;
+using System.Threading;
 
 // Configurar tratamento global de exceções não tratadas
 AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
