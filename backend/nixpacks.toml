@@ -5,4 +5,4 @@ nixPkgs = ["dotnet-sdk_8"]
 cmds = ["dotnet publish RaizesStore.Api/RaizesStore.Api.csproj -c Release -o /app/publish"]
 
 [start]
-cmd = "dotnet /app/publish/RaizesStore.Api.dll"
+cmd = "cd /app/publish && dotnet RaizesStore.Api.dll"
