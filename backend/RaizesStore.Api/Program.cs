@@ -156,7 +156,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
                     logger.LogWarning($"Tentativa {retryCount}/{maxRetries} de conexão falhou: {connectEx.Message}");
                     if (retryCount < maxRetries)
                     {
-                        await Task.Delay(2000); // Aguarda 2 segundos antes de tentar novamente
+                        Thread.Sleep(2000); // Aguarda 2 segundos antes de tentar novamente
                     }
                 }
             }
