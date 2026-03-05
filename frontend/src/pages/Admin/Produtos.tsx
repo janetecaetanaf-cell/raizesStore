@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Card, Tab, Tabs, Table, Button, Form, Modal, Alert, Badge } from 'react-bootstrap';
 import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import api from '../../services/api';
