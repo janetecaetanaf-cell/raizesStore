@@ -2,12 +2,25 @@ import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { FiTrash2, FiPlus, FiMinus, FiShoppingBag } from 'react-icons/fi';
 import { useCarrinho } from '../context/CarrinhoContext';
+import { useAuth } from '../context/AuthContext';
 import { TamanhoProduto, CorProduto } from '../types';
 import { Icon } from '../components/Icon';
+import { irParaLogin } from '../utils/authRedirect';
+import { showToast } from '../utils/toast';
 
 const Carrinho = () => {
   const { itens, removerItem, atualizarQuantidade, total } = useCarrinho();
+  const { estaAutenticado } = useAuth();
   const navigate = useNavigate();
+
+  const finalizarCompra = () => {
+    if (!estaAutenticado) {
+      showToast('Faça login para continuar a compra', 'info');
+      irParaLogin(navigate, '/checkout');
+      return;
+    }
+    navigate('/checkout');
+  };
 
   return (
     <Container className="my-5">
@@ -137,9 +150,9 @@ const Carrinho = () => {
                   variant="success"
                   size="lg"
                   className="w-100"
-                  onClick={() => navigate('/checkout')}
+                  onClick={finalizarCompra}
                 >
-                  Finalizar Compra
+                  {estaAutenticado ? 'Finalizar Compra' : 'Entrar e Finalizar Compra'}
                 </Button>
               </Card.Body>
             </Card>

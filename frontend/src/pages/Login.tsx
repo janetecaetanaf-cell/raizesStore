@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { Container, Row, Col, Card, Form, Button, Tabs, Tab } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Alert } from 'react-bootstrap';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
+import { obterRedirectSeguro } from '../utils/authRedirect';
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'cadastro'>('login');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, cadastrar } = useAuth();
+  const redirect = obterRedirectSeguro(searchParams.get('redirect'));
+  const mensagemCompra = redirect === '/checkout'
+    ? 'Entre na sua conta para finalizar a compra.'
+    : redirect.startsWith('/produto/')
+      ? 'Entre na sua conta para comprar este produto.'
+      : null;
 
   // Login
   const [emailLogin, setEmailLogin] = useState('');
@@ -32,7 +40,7 @@ const Login = () => {
     try {
       await login(emailLogin, senhaLogin);
       showToast('Login realizado com sucesso!', 'success');
-      navigate('/');
+      navigate(redirect);
     } catch (error: any) {
       showToast(error.message || 'Erro ao fazer login', 'error');
     } finally {
@@ -65,7 +73,7 @@ const Login = () => {
         senha: dadosCadastro.senha,
       });
       showToast('Cadastro realizado com sucesso!', 'success');
-      navigate('/');
+      navigate(redirect);
     } catch (error: any) {
       showToast(error.message || 'Erro ao cadastrar', 'error');
     } finally {
@@ -77,6 +85,11 @@ const Login = () => {
     <Container className="my-5">
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
+          {mensagemCompra && (
+            <Alert variant="info" className="mb-3">
+              {mensagemCompra}
+            </Alert>
+          )}
           <Card>
             <Card.Header>
               <Tabs

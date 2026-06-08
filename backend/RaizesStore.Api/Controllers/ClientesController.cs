@@ -26,7 +26,27 @@ public class ClientesController : ControllerBase
             .ToListAsync();
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("por-email")]
+    public async Task<ActionResult<Cliente>> GetClientePorEmail([FromQuery] string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return BadRequest("E-mail é obrigatório");
+        }
+
+        var cliente = await _context.Clientes
+            .Include(c => c.Enderecos.Where(e => e.DeletedAt == null))
+            .FirstOrDefaultAsync(c => c.Email.ToLower() == email.ToLower() && c.DeletedAt == null);
+
+        if (cliente == null)
+        {
+            return NotFound();
+        }
+
+        return cliente;
+    }
+
+    [HttpGet("{id:guid}")]
     public async Task<ActionResult<Cliente>> GetCliente(Guid id)
     {
         var cliente = await _context.Clientes
@@ -62,11 +82,10 @@ public class ClientesController : ControllerBase
             return BadRequest("A data de nascimento é obrigatória");
         }
 
-        // Limpar CPF se estiver vazio
         var cpf = string.IsNullOrWhiteSpace(dto.Cpf) ? null : dto.Cpf.Trim();
 
         var cliente = new Cliente(dto.Nome.Trim(), dto.Email.Trim(), dto.TelefoneCelular.Trim(), dto.DataNascimento, cpf);
-        
+
         if (dto.Endereco != null)
         {
             var endereco = new EnderecoCliente(
@@ -78,9 +97,8 @@ public class ClientesController : ControllerBase
                 dto.Endereco.Cidade,
                 dto.Endereco.Estado,
                 dto.Endereco.Complemento,
-                true
-            );
-            cliente.AdicionarEndereco(endereco);
+                true);
+            _context.EnderecosClientes.Add(endereco);
         }
 
         _context.Clientes.Add(cliente);
@@ -94,52 +112,39 @@ public class ClientesController : ControllerBase
         return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, clienteCompleto);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateCliente(Guid id, UpdateClienteDto dto)
     {
-        var cliente = await _context.Clientes
-            .FirstOrDefaultAsync(c => c.Id == id && c.DeletedAt == null);
-        
-        if (cliente == null)
+        if (string.IsNullOrWhiteSpace(dto.Nome))
+            return BadRequest("O nome é obrigatório");
+        if (string.IsNullOrWhiteSpace(dto.Email))
+            return BadRequest("O email é obrigatório");
+        if (string.IsNullOrWhiteSpace(dto.TelefoneCelular))
+            return BadRequest("O telefone celular é obrigatório");
+        if (dto.DataNascimento == default(DateTime))
+            return BadRequest("A data de nascimento é obrigatória");
+
+        var cpf = string.IsNullOrWhiteSpace(dto.Cpf) ? null : dto.Cpf.Trim();
+
+        var linhas = await _context.Clientes
+            .Where(c => c.Id == id && c.DeletedAt == null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(c => c.Nome, dto.Nome.Trim())
+                .SetProperty(c => c.Email, dto.Email.Trim())
+                .SetProperty(c => c.TelefoneCelular, dto.TelefoneCelular.Trim())
+                .SetProperty(c => c.DataNascimento, dto.DataNascimento)
+                .SetProperty(c => c.Cpf, cpf)
+                .SetProperty(c => c.UpdatedAt, DateTimeOffset.UtcNow));
+
+        if (linhas == 0)
         {
             return NotFound("Cliente não encontrado");
         }
 
-        // Validar campos obrigatórios
-        if (string.IsNullOrWhiteSpace(dto.Nome))
-        {
-            return BadRequest("O nome é obrigatório");
-        }
-        if (string.IsNullOrWhiteSpace(dto.Email))
-        {
-            return BadRequest("O email é obrigatório");
-        }
-        if (string.IsNullOrWhiteSpace(dto.TelefoneCelular))
-        {
-            return BadRequest("O telefone celular é obrigatório");
-        }
-        if (dto.DataNascimento == default(DateTime))
-        {
-            return BadRequest("A data de nascimento é obrigatória");
-        }
-
-        // Limpar CPF se estiver vazio
-        var cpf = string.IsNullOrWhiteSpace(dto.Cpf) ? null : dto.Cpf.Trim();
-
-        cliente.Atualizar(
-            dto.Nome.Trim(), 
-            dto.Email.Trim(), 
-            dto.TelefoneCelular.Trim(), 
-            dto.DataNascimento, 
-            cpf
-        );
-        
-        await _context.SaveChangesAsync();
-
         return NoContent();
     }
 
-    [HttpPost("{id}/enderecos")]
+    [HttpPost("{id:guid}/enderecos")]
     public async Task<ActionResult<EnderecoCliente>> AdicionarEndereco(Guid id, EnderecoDto dto)
     {
         // Validar campos obrigatórios
@@ -168,20 +173,19 @@ public class ClientesController : ControllerBase
             return BadRequest("O estado é obrigatório");
         }
 
-        var cliente = await _context.Clientes
-            .Include(c => c.Enderecos)
-            .FirstOrDefaultAsync(c => c.Id == id && c.DeletedAt == null);
+        var clienteExiste = await _context.Clientes
+            .AnyAsync(c => c.Id == id && c.DeletedAt == null);
 
-        if (cliente == null)
+        if (!clienteExiste)
         {
             return NotFound("Cliente não encontrado");
         }
 
-        // Se não há endereços, este será o principal
-        var isPrincipal = cliente.Enderecos.Count == 0;
+        var isPrincipal = !await _context.EnderecosClientes
+            .AnyAsync(e => e.ClienteId == id && e.DeletedAt == null);
 
         var endereco = new EnderecoCliente(
-            cliente.Id,
+            id,
             dto.Cep.Trim(),
             dto.Logradouro.Trim(),
             dto.Numero.Trim(),
@@ -189,13 +193,11 @@ public class ClientesController : ControllerBase
             dto.Cidade.Trim(),
             dto.Estado.Trim().ToUpper(),
             string.IsNullOrWhiteSpace(dto.Complemento) ? null : dto.Complemento.Trim(),
-            isPrincipal
-        );
+            isPrincipal);
 
-        cliente.AdicionarEndereco(endereco);
+        _context.EnderecosClientes.Add(endereco);
         await _context.SaveChangesAsync();
 
-        // Retornar o endereço criado
         return Ok(endereco);
     }
 }

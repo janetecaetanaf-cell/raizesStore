@@ -1,12 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Form, Badge, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert } from 'react-bootstrap';
 import { FiShoppingCart, FiMinus, FiPlus } from 'react-icons/fi';
 import api from '../services/api';
 import { Produto, TamanhoProduto, CorProduto, TipoProduto } from '../types';
 import { useCarrinho } from '../context/CarrinhoContext';
+import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
+import { irParaLogin } from '../utils/authRedirect';
 import { Icon } from '../components/Icon';
+import ProductImageCarousel from '../components/ProductImageCarousel';
+import OptionSelector from '../components/OptionSelector';
+import {
+  getImagensExibidas,
+  normalizarProduto,
+  COR_PRODUTO_HEX,
+  CORES_PADRAO_CAMISETA,
+  CORES_PADRAO_CANECA,
+} from '../utils/produto';
 
 const ProdutoDetalhes = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +28,7 @@ const ProdutoDetalhes = () => {
   const [quantidade, setQuantidade] = useState(1);
   const navigate = useNavigate();
   const { adicionarItem } = useCarrinho();
+  const { estaAutenticado } = useAuth();
 
   useEffect(() => {
     if (id) {
@@ -24,11 +36,17 @@ const ProdutoDetalhes = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    setTamanhoSelecionado('');
+    setCorSelecionada('');
+    setQuantidade(1);
+  }, [produto?.id]);
+
   const carregarProduto = async (produtoId: string) => {
     try {
       setLoading(true);
       const response = await api.get(`/produtos/${produtoId}`);
-      setProduto(response.data);
+      setProduto(normalizarProduto(response.data));
     } catch (error) {
       console.error('Erro ao carregar produto:', error);
       showToast('Não foi possível carregar o produto', 'error');
@@ -37,11 +55,55 @@ const ProdutoDetalhes = () => {
     }
   };
 
+  const tipo = produto ? Number(produto.tipoProduto) : null;
+
+  const coresDisponiveis = useMemo(() => {
+    if (!produto) return [];
+    if (produto.coresDisponiveis.length > 0) return produto.coresDisponiveis;
+    if (tipo === TipoProduto.Camiseta) return CORES_PADRAO_CAMISETA;
+    if (tipo === TipoProduto.Caneca) return CORES_PADRAO_CANECA;
+    return [];
+  }, [produto, tipo]);
+
+  const opcoesTamanho = useMemo(
+    () =>
+      (produto?.tamanhosDisponiveis ?? []).map((t) => ({
+        value: t,
+        label: TamanhoProduto[t],
+      })),
+    [produto]
+  );
+
+  const opcoesCor = useMemo(
+    () =>
+      coresDisponiveis.map((c) => ({
+        value: c,
+        label: CorProduto[c],
+        swatch: COR_PRODUTO_HEX[c],
+      })),
+    [coresDisponiveis]
+  );
+
+  const imagensExibidas = useMemo(
+    () =>
+      produto
+        ? getImagensExibidas(produto, corSelecionada, coresDisponiveis)
+        : [],
+    [produto, corSelecionada, coresDisponiveis]
+  );
+
+  const carouselKey = `${produto?.id ?? 'prod'}-${corSelecionada || 'default'}`;
+
   const handleAdicionarAoCarrinho = () => {
+    if (!estaAutenticado) {
+      showToast('Faça login para adicionar produtos ao carrinho', 'info');
+      irParaLogin(navigate, `/produto/${id}`);
+      return;
+    }
+
     if (!produto) return;
 
-    // Validar seleções baseado no tipo de produto
-    if (produto.tipoProduto === TipoProduto.Camiseta) {
+    if (tipo === TipoProduto.Camiseta) {
       if (!tamanhoSelecionado) {
         showToast('Selecione um tamanho', 'warning');
         return;
@@ -50,7 +112,7 @@ const ProdutoDetalhes = () => {
         showToast('Selecione uma cor', 'warning');
         return;
       }
-    } else if (produto.tipoProduto === TipoProduto.Caneca) {
+    } else if (tipo === TipoProduto.Caneca) {
       if (!corSelecionada) {
         showToast('Selecione uma cor', 'warning');
         return;
@@ -88,139 +150,108 @@ const ProdutoDetalhes = () => {
   }
 
   return (
-    <Container className="my-5">
-      <Row>
-        <Col md={6}>
-          <Card className="mb-4">
-            {produto.imagens && produto.imagens.length > 0 ? (
-              <Card.Img
-                variant="top"
-                src={produto.imagens[0]}
+    <div className="product-detail-page">
+      <Container className="my-4">
+        <Row>
+          <Col md={6}>
+            <Card className="mb-4 product-detail-media-card">
+              <ProductImageCarousel
+                imagens={imagensExibidas}
                 alt={produto.nome}
-                style={{ height: '500px', objectFit: 'cover' }}
+                carouselKey={carouselKey}
               />
-            ) : (
-              <div className="bg-light d-flex align-items-center justify-content-center" style={{ height: '500px' }}>
-                <span className="text-muted">Sem imagem</span>
-              </div>
-            )}
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card>
-            <Card.Body>
-              <Badge bg="secondary" className="mb-3">
-                {produto.categoria?.nome}
-              </Badge>
-              <h1 className="mb-3">{produto.nome}</h1>
-              <h2 className="text-primary mb-4">R$ {produto.preco.toFixed(2)}</h2>
-              
-              <p className="text-muted mb-4">{produto.descricao}</p>
+            </Card>
+          </Col>
+          <Col md={6}>
+            <Card className="product-detail-info-card">
+              <Card.Body>
+                <Badge bg="secondary" className="mb-3">
+                  {produto.categoria?.nome}
+                </Badge>
+                <h1 className="mb-3">{produto.nome}</h1>
+                <div className="product-detail-price mb-1">
+                  R$ {produto.preco.toFixed(2).replace('.', ',')}
+                </div>
+                <p className="product-detail-pix mb-4">
+                  R$ {(produto.preco * 0.95).toFixed(2).replace('.', ',')} com Pix (5% off)
+                </p>
 
-              {produto.tipoProduto === TipoProduto.Camiseta && (
-                <>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-bold">Tamanho:</Form.Label>
-                    <Form.Select
-                      value={tamanhoSelecionado}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setTamanhoSelecionado(v ? (Number(v) as TamanhoProduto) : '');
-                      }}
+                <p className="text-muted mb-4">{produto.descricao}</p>
+
+                {tipo === TipoProduto.Camiseta && (
+                  <>
+                    <OptionSelector
+                      label="Tamanho"
+                      opcoes={opcoesTamanho}
+                      valorSelecionado={tamanhoSelecionado}
+                      onChange={(v) => setTamanhoSelecionado(v)}
+                      aviso="Cadastre os tamanhos deste produto no painel admin."
+                    />
+                    <OptionSelector
+                      label="Cor"
+                      opcoes={opcoesCor}
+                      valorSelecionado={corSelecionada}
+                      onChange={(v) => setCorSelecionada(v)}
+                      aviso="Cadastre as cores deste produto no painel admin."
+                    />
+                  </>
+                )}
+
+                {tipo === TipoProduto.Caneca && (
+                  <OptionSelector
+                    label="Cor"
+                    opcoes={opcoesCor}
+                    valorSelecionado={corSelecionada}
+                    onChange={(v) => setCorSelecionada(v)}
+                    aviso="Cadastre as cores deste produto no painel admin."
+                  />
+                )}
+
+                <div className="mb-3">
+                  <p className="fw-bold mb-2">Quantidade</p>
+                  <div className="d-flex align-items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      onClick={() => setQuantidade(Math.max(1, quantidade - 1))}
                     >
-                      <option value="">Selecione o tamanho</option>
-                      {produto.tamanhosDisponiveis.map((tamanho) => (
-                        <option key={tamanho} value={tamanho}>
-                          {TamanhoProduto[tamanho]}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-bold">Cor:</Form.Label>
-                    <Form.Select
-                      value={corSelecionada}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setCorSelecionada(v ? (Number(v) as CorProduto) : '');
-                      }}
+                      <Icon icon={FiMinus} />
+                    </Button>
+                    <span className="fw-bold fs-5">{quantidade}</span>
+                    <Button
+                      type="button"
+                      variant="outline-secondary"
+                      onClick={() => setQuantidade(quantidade + 1)}
                     >
-                      <option value="">Selecione a cor</option>
-                      {produto.coresDisponiveis.map((cor) => (
-                        <option key={cor} value={cor}>
-                          {CorProduto[cor]}
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Form.Group>
-                </>
-              )}
+                      <Icon icon={FiPlus} />
+                    </Button>
+                  </div>
+                </div>
 
-              {produto.tipoProduto === TipoProduto.Caneca && (
-                <Form.Group className="mb-3">
-                  <Form.Label className="fw-bold">Cor:</Form.Label>
-                  <Form.Select
-                    value={corSelecionada}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setCorSelecionada(v ? (Number(v) as CorProduto) : '');
-                    }}
-                  >
-                    <option value="">Selecione a cor</option>
-                    {produto.coresDisponiveis.map((cor) => (
-                      <option key={cor} value={cor}>
-                        {CorProduto[cor]}
-                      </option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              )}
+                <p className="text-muted mb-4">
+                  <small>Estoque: {produto.estoque} unidades</small>
+                </p>
 
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-bold">Quantidade:</Form.Label>
-                <div className="d-flex align-items-center gap-3">
+                <div className="d-grid gap-2">
                   <Button
-                    variant="outline-secondary"
-                    onClick={() => setQuantidade(Math.max(1, quantidade - 1))}
+                    variant="primary"
+                    size="lg"
+                    onClick={handleAdicionarAoCarrinho}
+                    disabled={produto.estoque === 0}
                   >
-                    <Icon icon={FiMinus} />
+                    <Icon icon={FiShoppingCart} className="me-2" />
+                    {produto.estoque === 0 ? 'Sem estoque' : estaAutenticado ? 'Adicionar ao Carrinho' : 'Entrar e Comprar'}
                   </Button>
-                  <span className="fw-bold fs-5">{quantidade}</span>
-                  <Button
-                    variant="outline-secondary"
-                    onClick={() => setQuantidade(quantidade + 1)}
-                  >
-                    <Icon icon={FiPlus} />
+                  <Button variant="outline-primary" onClick={() => navigate('/carrinho')}>
+                    Ver Carrinho
                   </Button>
                 </div>
-              </Form.Group>
-
-              <p className="text-muted mb-4">
-                <small>Estoque: {produto.estoque} unidades</small>
-              </p>
-
-              <div className="d-grid gap-2">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleAdicionarAoCarrinho}
-                  disabled={produto.estoque === 0}
-                >
-                  <Icon icon={FiShoppingCart} className="me-2" />
-                  {produto.estoque === 0 ? 'Sem estoque' : 'Adicionar ao Carrinho'}
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  onClick={() => navigate('/carrinho')}
-                >
-                  Ver Carrinho
-                </Button>
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+    </div>
   );
 };
 

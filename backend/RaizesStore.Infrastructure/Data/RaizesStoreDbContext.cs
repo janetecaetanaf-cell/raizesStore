@@ -91,6 +91,18 @@ public class RaizesStoreDbContext : DbContext
                 .HasColumnType("text");
             imagensProperty.Metadata.SetValueComparer(imagensComparer);
 
+            var imagensPorCorComparer = new ValueComparer<Dictionary<CorProduto, string>>(
+                (c1, c2) => c1 != null && c2 != null && c1.Count == c2.Count && !c1.Except(c2).Any(),
+                c => c.Aggregate(0, (a, kv) => HashCode.Combine(a, kv.Key.GetHashCode(), kv.Value != null ? kv.Value.GetHashCode() : 0)),
+                c => c.ToDictionary(kv => kv.Key, kv => kv.Value));
+
+            var imagensPorCorProperty = entity.Property(e => e.ImagensPorCor)
+                .HasConversion(
+                    v => SerializarImagensPorCor(v),
+                    v => DesserializarImagensPorCor(v))
+                .HasColumnType("text");
+            imagensPorCorProperty.Metadata.SetValueComparer(imagensPorCorComparer);
+
             entity.HasOne(e => e.Categoria)
                 .WithMany()
                 .HasForeignKey(e => e.CategoriaId)
@@ -140,6 +152,8 @@ public class RaizesStoreDbContext : DbContext
             entity.Property(e => e.CodigoPix).HasMaxLength(500);
             entity.Property(e => e.QrCodePix).HasColumnType("text");
             entity.Property(e => e.CodigoRastreamento).HasMaxLength(100);
+            entity.Property(e => e.PagSeguroCheckoutCode).HasMaxLength(100);
+            entity.Property(e => e.PagSeguroTransactionCode).HasMaxLength(100);
 
             entity.HasOne(e => e.Cliente)
                 .WithMany()
@@ -199,5 +213,29 @@ public class RaizesStoreDbContext : DbContext
         }
 
         return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string SerializarImagensPorCor(Dictionary<CorProduto, string> value)
+    {
+        return string.Join("|", value.Select(kv => $"{(int)kv.Key}:{kv.Value}"));
+    }
+
+    private static Dictionary<CorProduto, string> DesserializarImagensPorCor(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return new Dictionary<CorProduto, string>();
+
+        var result = new Dictionary<CorProduto, string>();
+        foreach (var part in value.Split('|', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var sep = part.IndexOf(':');
+            if (sep <= 0) continue;
+            var cor = (CorProduto)int.Parse(part.Substring(0, sep));
+            var url = part.Substring(sep + 1);
+            if (!string.IsNullOrWhiteSpace(url))
+                result[cor] = url;
+        }
+
+        return result;
     }
 }

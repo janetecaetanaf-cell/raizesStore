@@ -30,15 +30,29 @@ public class Pedido : Entity
     public DateTime? DataEnvio { get; protected set; }
     public DateTime? DataEntrega { get; protected set; }
     public string? CodigoRastreamento { get; protected set; }
+    public string? PagSeguroCheckoutCode { get; protected set; }
+    public string? PagSeguroTransactionCode { get; protected set; }
 
     public void AdicionarItem(Produto produto, int quantidade, TamanhoProduto? tamanho, CorProduto? cor)
     {
-        if (!produto.TemEstoque(quantidade))
+        AdicionarItem(produto.Id, produto.Nome, quantidade, tamanho, cor, produto.Preco, produto.Estoque);
+    }
+
+    public void AdicionarItem(
+        Guid produtoId,
+        string nomeProduto,
+        int quantidade,
+        TamanhoProduto? tamanho,
+        CorProduto? cor,
+        decimal precoUnitario,
+        int? estoqueDisponivel = null)
+    {
+        if (estoqueDisponivel.HasValue && estoqueDisponivel.Value < quantidade)
         {
-            throw new InvalidOperationException($"Produto {produto.Nome} não possui estoque suficiente.");
+            throw new InvalidOperationException($"Produto {nomeProduto} não possui estoque suficiente.");
         }
 
-        var item = new ItemPedido(produto.Id, quantidade, tamanho, cor, produto.Preco);
+        var item = new ItemPedido(produtoId, quantidade, tamanho, cor, precoUnitario);
         Itens.Add(item);
         CalcularValorTotal();
         SetUpdateAt();
@@ -74,6 +88,18 @@ public class Pedido : Entity
     {
         CodigoPix = codigoPix;
         QrCodePix = qrCodePix;
+        SetUpdateAt();
+    }
+
+    public void DefinirCheckoutPagSeguro(string checkoutCode)
+    {
+        PagSeguroCheckoutCode = checkoutCode;
+        SetUpdateAt();
+    }
+
+    public void DefinirTransacaoPagSeguro(string transactionCode)
+    {
+        PagSeguroTransactionCode = transactionCode;
         SetUpdateAt();
     }
 

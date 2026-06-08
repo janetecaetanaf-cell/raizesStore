@@ -1,240 +1,213 @@
-import { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Form, Badge } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
-import { FiChevronDown, FiEye } from 'react-icons/fi';
-import api from '../services/api';
-import { Produto, Categoria, TipoProduto } from '../types';
-import { Icon } from '../components/Icon';
+import { useState, useEffect } from "react";
+import { Container, Row, Col, Nav } from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import { Produto, Categoria } from "../types";
+import { produtosDemo, categoriasDemo } from "../data/demoProdutos";
+import { normalizarProduto } from "../utils/produto";
+import ProductCard from "../components/ProductCard";
+import TrustSection from "../components/TrustSection";
+
+const CATEGORIAS_OCULTAS = ["Camisetas Religiosas", "Kits Ritualísticos"];
+
+const filtrarCategorias = (cats: Categoria[]) =>
+  cats.filter((c) => !CATEGORIAS_OCULTAS.includes(c.nome));
 
 const Home = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>('');
-  const [tipoSelecionado, setTipoSelecionado] = useState<TipoProduto | ''>('');
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<string>("");
+  const [usandoDemo, setUsandoDemo] = useState(false);
   const navigate = useNavigate();
-  const heroSectionRef = useRef<HTMLDivElement>(null);
-  const heroVideoRef = useRef<HTMLVideoElement>(null);
-  const heroContentRef = useRef<HTMLDivElement>(null);
-  const produtosSectionRef = useRef<HTMLDivElement>(null);
-
-  const scrollToProdutos = () => {
-    produtosSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   useEffect(() => {
-    carregarCategorias();
-    carregarProdutos();
+    carregarLoja();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    carregarProdutos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoriaSelecionada, tipoSelecionado]);
-
-  // Efeito parallax
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!heroSectionRef.current || !heroVideoRef.current) return;
-
-      const heroSection = heroSectionRef.current;
-      const rect = heroSection.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      
-      // Calcula a posição do scroll em relação à seção hero
-      // Quando a seção está totalmente visível, parallax = 0
-      // Quando a seção sai da tela, parallax aumenta
-      const scrollProgress = Math.max(0, Math.min(1, 
-        (windowHeight - rect.top) / (windowHeight + rect.height)
-      ));
-      
-      // Aplica o efeito parallax apenas quando a seção está visível ou saindo
-      if (rect.bottom >= 0 && rect.top <= windowHeight * 2) {
-        // Move o vídeo para baixo mais devagar que o scroll (efeito parallax)
-        // Multiplicador cria um efeito suave
-        const parallaxOffset = scrollProgress * 150;
-        heroVideoRef.current.style.transform = `translate(-50%, calc(-50% + ${parallaxOffset}px))`;
-        
-        // Efeito parallax mais sutil no conteúdo (move para cima enquanto scrolla)
-        if (heroContentRef.current) {
-          const contentOffset = scrollProgress * -30;
-          heroContentRef.current.style.transform = `translateY(${contentOffset}px)`;
-          heroContentRef.current.style.opacity = `${1 - scrollProgress * 0.3}`;
-        }
-      }
-    };
-
-    // Usa requestAnimationFrame para performance
-    let ticking = false;
-    const optimizedScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          handleScroll();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    window.addEventListener('scroll', optimizedScroll, { passive: true });
-    handleScroll(); // Chama uma vez para posicionar inicialmente
-
-    return () => {
-      window.removeEventListener('scroll', optimizedScroll);
-    };
-  }, []);
-
-  const carregarCategorias = async () => {
-    try {
-      const response = await api.get('/categorias');
-      setCategorias(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+    if (usandoDemo) {
+      setProdutos(
+        categoriaSelecionada
+          ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
+          : produtosDemo,
+      );
+      return;
     }
+
+    carregarProdutosApi();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoriaSelecionada, usandoDemo]);
+
+  const aplicarDemo = () => {
+    setCategorias(filtrarCategorias(categoriasDemo));
+    setProdutos(
+      categoriaSelecionada
+        ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
+        : produtosDemo,
+    );
+    setUsandoDemo(true);
   };
 
-  const carregarProdutos = async () => {
+  const carregarLoja = async () => {
     try {
-      const params: any = {};
+      const [categoriasRes, produtosRes] = await Promise.all([
+        api.get("/categorias"),
+        api.get("/produtos"),
+      ]);
+
+      if (categoriasRes.data?.length > 0 && produtosRes.data?.length > 0) {
+        setCategorias(filtrarCategorias(categoriasRes.data));
+        setProdutos(
+          produtosRes.data.map((p: Record<string, unknown>) =>
+            normalizarProduto(p),
+          ),
+        );
+        setUsandoDemo(false);
+        return;
+      }
+    } catch {
+      // cai no demo completo abaixo
+    }
+
+    setCategoriaSelecionada("");
+    aplicarDemo();
+  };
+
+  const carregarProdutosApi = async () => {
+    try {
+      const params: Record<string, string> = {};
       if (categoriaSelecionada) params.categoriaId = categoriaSelecionada;
-      if (tipoSelecionado) params.tipoProduto = tipoSelecionado;
-      
-      const response = await api.get('/produtos', { params });
-      setProdutos(response.data);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
+
+      const response = await api.get("/produtos", { params });
+      if (response.data?.length > 0) {
+        setProdutos(
+          response.data.map((p: Record<string, unknown>) =>
+            normalizarProduto(p),
+          ),
+        );
+        return;
+      }
+    } catch {
+      aplicarDemo();
     }
   };
+
+  const destaques = produtos.slice(0, 8);
 
   return (
     <>
-      {/* Hero Section */}
-      <div ref={heroSectionRef} className="hero-section">
-        <video 
-          ref={heroVideoRef}
-          className="hero-video" 
-          autoPlay 
-          loop 
-          muted 
-          playsInline
-        >
-          <source src="/videos/por-do-sol-mata.mp4" type="video/mp4" />
-          {/* Seu navegador não suporta o elemento de vídeo. */}
-        </video>
-        <div className="hero-overlay"></div>
-        <Container ref={heroContentRef} className="hero-content">
-          <Row>
-            <Col lg={8} className="mx-auto text-center">
-              <div className="hero-title-container">
-                <video 
-                  className="hero-title-video-bg" 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline
-                >
-                  <source src="/videos/por-do-sol-mata.mp4" type="video/mp4" />
-                </video>
-                <h1 className="hero-title">
-                  <span className="hero-title-text">Raizes Store</span>
-                </h1>
-              </div>
-              <p className="hero-subtitle">Descubra nossa coleção exclusiva ou seja você o criador</p>
-              <Button 
-                variant="outline-light" 
-                size="lg" 
-                className="hero-scroll-button mt-4"
-                onClick={scrollToProdutos}
+      {/* Hero Banner */}
+      <section className="hero-banner">
+        <div className="hero-banner-pattern" />
+        <Container className="hero-banner-content">
+          <Row className="align-items-center">
+            <Col lg={7}>
+              <p className="hero-eyebrow">Artigos religiosos</p>
+              <h1 className="hero-headline">Presentes que fortalecem a fé</h1>
+              <p className="hero-description">
+                Velas, incensos, guias, imagens de orixás, camisetas e canecas —
+                tudo feito com respeito à tradição da Umbanda.
+              </p>
+              <button
+                type="button"
+                className="hero-cta"
+                onClick={() =>
+                  document
+                    .getElementById("destaques")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
               >
-                <Icon icon={FiChevronDown} className="me-2" />
-                Ver Produtos
-              </Button>
+                Ver destaques
+              </button>
+            </Col>
+            <Col lg={5} className="d-none d-lg-block">
+              <div className="hero-symbol">☽ ✦ ☾</div>
             </Col>
           </Row>
         </Container>
-      </div>
+      </section>
 
-      <Container ref={produtosSectionRef} className="mb-5">
-        {/* Filtros */}
-        <Row className="mb-4">
-          <Col md={6} lg={4}>
-            <Form.Select
-              value={categoriaSelecionada}
-              onChange={(e) => setCategoriaSelecionada(e.target.value)}
+      {/* Categorias em pills */}
+      <section className="categories-nav">
+        <Container>
+          <Nav className="category-pills justify-content-center flex-wrap">
+            <Nav.Link
+              active={!categoriaSelecionada}
+              onClick={() => setCategoriaSelecionada("")}
+              className="category-pill"
             >
-              <option value="">Todas as categorias</option>
-              {categorias.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nome}
-                </option>
-              ))}
-            </Form.Select>
-          </Col>
-          <Col md={6} lg={4}>
-            <Form.Select
-              value={tipoSelecionado}
-              onChange={(e) => setTipoSelecionado(e.target.value as TipoProduto | '')}
-            >
-              <option value="">Todos os tipos</option>
-              <option value={TipoProduto.Camiseta}>Camisetas</option>
-              <option value={TipoProduto.Caneca}>Canecas</option>
-              <option value={TipoProduto.Outros}>Outros</option>
-            </Form.Select>
-          </Col>
-        </Row>
-
-        {/* Grid de Produtos */}
-        {produtos.length === 0 ? (
-          <div className="text-center py-5">
-            <p className="text-muted fs-5">Nenhum produto encontrado</p>
-          </div>
-        ) : (
-          <Row className="g-4">
-            {produtos.map((produto) => (
-              <Col key={produto.id} xs={12} sm={6} md={4} lg={3}>
-                <Card className="product-card h-100">
-                  {produto.imagens && produto.imagens.length > 0 ? (
-                    <Card.Img
-                      variant="top"
-                      src={produto.imagens[0]}
-                      alt={produto.nome}
-                      className="product-image"
-                    />
-                  ) : (
-                    <div className="product-image bg-light d-flex align-items-center justify-content-center">
-                      <span className="text-muted">Sem imagem</span>
-                    </div>
-                  )}
-                  <Card.Body className="product-card-body">
-                    <div>
-                      <Badge bg="secondary" className="mb-2">
-                        {produto.categoria?.nome}
-                      </Badge>
-                      <Card.Title className="h5 mb-2">{produto.nome}</Card.Title>
-                      <Card.Text className="text-muted small mb-3">
-                        {produto.descricao.length > 80 
-                          ? `${produto.descricao.substring(0, 80)}...` 
-                          : produto.descricao}
-                      </Card.Text>
-                    </div>
-                    <div>
-                      <div className="price mb-3">R$ {produto.preco.toFixed(2)}</div>
-                      <Button
-                        variant="primary"
-                        className="w-100"
-                        onClick={() => navigate(`/produto/${produto.id}`)}
-                      >
-                        <Icon icon={FiEye} className="me-2" />
-                        Ver Detalhes
-                      </Button>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
+              Todos
+            </Nav.Link>
+            {categorias.map((cat) => (
+              <Nav.Link
+                key={cat.id}
+                active={categoriaSelecionada === cat.id}
+                onClick={() => setCategoriaSelecionada(cat.id)}
+                className="category-pill"
+              >
+                {cat.nome}
+              </Nav.Link>
             ))}
+          </Nav>
+        </Container>
+      </section>
+
+      {/* Destaques */}
+      <section id="destaques" className="destaques-section">
+        <Container>
+          <h2 className="section-title text-center">Destaques</h2>
+          {usandoDemo && (
+            <p className="text-center demo-notice">
+              Catálogo de demonstração — cadastre produtos no painel admin para
+              substituir estes itens.
+            </p>
+          )}
+          {destaques.length === 0 ? (
+            <div className="text-center py-5">
+              <p className="text-muted fs-5">
+                Nenhum produto encontrado nesta categoria
+              </p>
+            </div>
+          ) : (
+            <Row className="g-4">
+              {destaques.map((produto) => (
+                <Col key={produto.id} xs={6} md={4} lg={3}>
+                  <ProductCard
+                    produto={produto}
+                    onComprar={(p) =>
+                      !p.id.startsWith("demo-") && navigate(`/produto/${p.id}`)
+                    }
+                  />
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Container>
+      </section>
+
+      {/* Banner informativo */}
+      <section className="info-banner">
+        <Container>
+          <Row className="align-items-center">
+            <Col md={8}>
+              <h3>Personalizamos do seu jeito</h3>
+              <p>
+                Canecas, camisetas, guias e imagens com nomes, orixás, frases
+                sagradas e artes exclusivas. Ajuda na criação da arte sem custo
+                adicional.
+              </p>
+            </Col>
+            <Col md={4} className="text-md-end mt-3 mt-md-0">
+              <a href="/atendimento" className="info-banner-link">
+                Fale conosco →
+              </a>
+            </Col>
           </Row>
-        )}
-      </Container>
+        </Container>
+      </section>
+
+      <TrustSection />
     </>
   );
 };

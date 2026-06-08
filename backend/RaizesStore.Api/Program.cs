@@ -42,6 +42,54 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.Configure<RaizesStore.Api.Options.PagSeguroOptions>(
+    builder.Configuration.GetSection(RaizesStore.Api.Options.PagSeguroOptions.SectionName));
+
+builder.Services.PostConfigure<RaizesStore.Api.Options.PagSeguroOptions>(options =>
+{
+    options.Email = options.Email.Trim();
+    options.Token = options.Token.Trim();
+    options.PublicKey = options.PublicKey.Trim();
+
+    var email = Environment.GetEnvironmentVariable("PAGSEGURO_EMAIL");
+    if (!string.IsNullOrWhiteSpace(email))
+    {
+        options.Email = email.Trim();
+    }
+
+    var token = Environment.GetEnvironmentVariable("PAGSEGURO_TOKEN");
+    if (!string.IsNullOrWhiteSpace(token))
+    {
+        options.Token = token.Trim();
+    }
+
+    var publicKey = Environment.GetEnvironmentVariable("PAGSEGURO_PUBLIC_KEY");
+    if (!string.IsNullOrWhiteSpace(publicKey))
+    {
+        options.PublicKey = publicKey.Trim();
+    }
+
+    var sandbox = Environment.GetEnvironmentVariable("PAGSEGURO_SANDBOX");
+    if (!string.IsNullOrWhiteSpace(sandbox) && bool.TryParse(sandbox, out var isSandbox))
+    {
+        options.Sandbox = isSandbox;
+    }
+
+    var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+    if (!string.IsNullOrWhiteSpace(frontendUrl))
+    {
+        options.FrontendUrl = frontendUrl;
+    }
+
+    var notificationUrl = Environment.GetEnvironmentVariable("PAGSEGURO_NOTIFICATION_URL");
+    if (!string.IsNullOrWhiteSpace(notificationUrl))
+    {
+        options.NotificationUrl = notificationUrl;
+    }
+});
+
+builder.Services.AddHttpClient<RaizesStore.Api.Services.IPagSeguroService, RaizesStore.Api.Services.PagSeguroService>();
+
     // Database - PostgreSQL
     // Tenta pegar do DATABASE_URL (Railway/Render) ou da ConnectionString
     var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -162,6 +210,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
                 {
                     logger.LogInformation("Banco de dados está atualizado.");
                 }
+
+                await DbSeeder.SeedAsync(dbContext);
+                logger.LogInformation("Seed de dados verificado.");
             }
             else
             {

@@ -30,6 +30,7 @@ public class Produto : Entity
     public List<TamanhoProduto> TamanhosDisponiveis { get; protected set; } = new();
     public List<CorProduto> CoresDisponiveis { get; protected set; } = new();
     public List<string> Imagens { get; protected set; } = new();
+    public Dictionary<CorProduto, string> ImagensPorCor { get; protected set; } = new();
 
     public void Atualizar(string nome, string descricao, decimal preco, Guid categoriaId, bool ativo, int estoque)
     {
@@ -87,6 +88,18 @@ public class Produto : Entity
         SetUpdateAt();
     }
 
+    public void DefinirImagemCor(CorProduto cor, string urlImagem)
+    {
+        ImagensPorCor[cor] = urlImagem;
+        SetUpdateAt();
+    }
+
+    public void LimparImagensPorCor()
+    {
+        ImagensPorCor.Clear();
+        SetUpdateAt();
+    }
+
     public void AtualizarEstoque(int quantidade)
     {
         Estoque = quantidade;
@@ -103,7 +116,11 @@ public enum TipoProduto
 {
     Camiseta = 1,
     Caneca = 2,
-    Outros = 3
+    Outros = 3,
+    Vela = 4,
+    Defumador = 5,
+    Guia = 6,
+    ImagemQuadro = 7
 }
 
 public enum TamanhoProduto

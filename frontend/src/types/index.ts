@@ -2,7 +2,25 @@ export enum TipoProduto {
   Camiseta = 1,
   Caneca = 2,
   Outros = 3,
+  Vela = 4,
+  Defumador = 5,
+  Guia = 6,
+  ImagemQuadro = 7,
 }
+
+export const TIPO_PRODUTO_LABELS: Record<TipoProduto, string> = {
+  [TipoProduto.Camiseta]: 'Camiseta',
+  [TipoProduto.Caneca]: 'Caneca',
+  [TipoProduto.Outros]: 'Outros',
+  [TipoProduto.Vela]: 'Vela',
+  [TipoProduto.Defumador]: 'Defumador',
+  [TipoProduto.Guia]: 'Guia',
+  [TipoProduto.ImagemQuadro]: 'Imagem / Quadro',
+};
+
+export const TIPOS_PRODUTO_OPCOES = Object.entries(TIPO_PRODUTO_LABELS).map(
+  ([value, label]) => ({ value: Number(value) as TipoProduto, label })
+);
 
 export enum TamanhoProduto {
   PP = 1,
@@ -50,6 +68,7 @@ export interface Produto {
   nome: string;
   descricao: string;
   preco: number;
+  precoOriginal?: number;
   categoriaId: string;
   categoria?: Categoria;
   tipoProduto: TipoProduto;
@@ -58,6 +77,7 @@ export interface Produto {
   tamanhosDisponiveis: TamanhoProduto[];
   coresDisponiveis: CorProduto[];
   imagens: string[];
+  imagensPorCor?: Partial<Record<CorProduto, string>>;
 }
 
 export interface Cliente {

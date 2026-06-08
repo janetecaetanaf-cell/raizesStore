@@ -77,29 +77,38 @@ public class PedidosController : ControllerBase
         }
 
         var endereco = await _context.EnderecosClientes
+            .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == dto.EnderecoEntregaId && e.DeletedAt == null);
         if (endereco == null)
         {
             return BadRequest("Endereço não encontrado");
         }
 
-        // Carregar todos os produtos de uma vez
+        if (endereco.ClienteId != dto.ClienteId)
+        {
+            return BadRequest("Endereço não pertence ao cliente informado");
+        }
+
+        // Carregar produtos sem rastrear (evita conflito ao atualizar estoque)
         var produtoIds = dto.Itens.Select(i => i.ProdutoId).Distinct().ToList();
         var produtos = await _context.Produtos
+            .AsNoTracking()
             .Where(p => produtoIds.Contains(p.Id) && p.DeletedAt == null)
             .ToListAsync();
 
         // Validar produtos e estoque antes de criar o pedido
-        foreach (var itemDto in dto.Itens)
+        foreach (var grupo in dto.Itens.GroupBy(i => i.ProdutoId))
         {
-            var produto = produtos.FirstOrDefault(p => p.Id == itemDto.ProdutoId);
-            
+            var produto = produtos.FirstOrDefault(p => p.Id == grupo.Key);
+
             if (produto == null)
             {
-                return BadRequest($"Produto {itemDto.ProdutoId} não encontrado");
+                return BadRequest($"Produto {grupo.Key} não encontrado");
             }
 
-            if (!produto.TemEstoque(itemDto.Quantidade))
+            var quantidadeTotal = grupo.Sum(i => i.Quantidade);
+
+            if (!produto.TemEstoque(quantidadeTotal))
             {
                 return BadRequest($"Produto {produto.Nome} não possui estoque suficiente. Disponível: {produto.Estoque}");
             }
@@ -114,36 +123,32 @@ public class PedidosController : ControllerBase
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            // Criar pedido após validações
+            foreach (var grupo in dto.Itens.GroupBy(i => i.ProdutoId))
+            {
+                var quantidadeTotal = grupo.Sum(i => i.Quantidade);
+                var linhasAfetadas = await _context.Produtos
+                    .Where(p => p.Id == grupo.Key && p.DeletedAt == null && p.Estoque >= quantidadeTotal)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(p => p.Estoque, p => p.Estoque - quantidadeTotal)
+                        .SetProperty(p => p.UpdatedAt, DateTimeOffset.UtcNow));
+
+                if (linhasAfetadas == 0)
+                {
+                    var produto = produtos.First(p => p.Id == grupo.Key);
+                    await transaction.RollbackAsync();
+                    return BadRequest($"Produto {produto.Nome} não possui estoque suficiente.");
+                }
+            }
+
             var pedido = new Pedido(dto.ClienteId, dto.EnderecoEntregaId);
 
-            // Adicionar itens ao pedido
             foreach (var itemDto in dto.Itens)
             {
-                var produto = produtos.FirstOrDefault(p => p.Id == itemDto.ProdutoId);
-                
-                if (produto != null)
-                {
-                    // Adicionar item ao pedido (valida estoque internamente)
-                    pedido.AdicionarItem(produto, itemDto.Quantidade, itemDto.Tamanho, itemDto.Cor);
-                }
-            }
-            
-            // Atualizar estoque dos produtos após adicionar todos os itens
-            foreach (var itemDto in dto.Itens)
-            {
-                var produto = produtos.FirstOrDefault(p => p.Id == itemDto.ProdutoId);
-                if (produto != null)
-                {
-                    produto.AtualizarEstoque(produto.Estoque - itemDto.Quantidade);
-                }
+                var produto = produtos.First(p => p.Id == itemDto.ProdutoId);
+                pedido.AdicionarItem(produto.Id, produto.Nome, itemDto.Quantidade, itemDto.Tamanho, itemDto.Cor, produto.Preco);
             }
 
-            // Gerar código PIX (simulado - você deve integrar com um serviço real)
-            var codigoPix = GerarCodigoPix(pedido.ValorTotal);
-            var qrCodePix = GerarQrCodePix(codigoPix);
-            pedido.DefinirDadosPix(codigoPix, qrCodePix);
-
+            _context.ChangeTracker.Clear();
             _context.Pedidos.Add(pedido);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -208,18 +213,6 @@ public class PedidosController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private string GerarCodigoPix(decimal valor)
-    {
-        // Simulação - você deve integrar com um serviço real de PIX
-        return $"00020126580014BR.GOV.BCB.PIX0136{Guid.NewGuid()}5204000053039865802BR5913RAIZES STORE6009SAO PAULO62070503***6304{new Random().Next(1000, 9999)}";
-    }
-
-    private string GerarQrCodePix(string codigoPix)
-    {
-        // Simulação - você deve gerar o QR Code real usando uma biblioteca
-        return $"data:image/png;base64,QRCODE_BASE64_AQUI";
     }
 }
 

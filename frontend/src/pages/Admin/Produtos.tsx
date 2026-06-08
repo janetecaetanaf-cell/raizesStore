@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Tab, Tabs, Table, Button, Form, Modal, Alert, Badge } from 'react-bootstrap';
 import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import api from '../../services/api';
-import { Categoria, Produto, TipoProduto, TamanhoProduto, CorProduto } from '../../types';
+import { Categoria, Produto, TipoProduto, TamanhoProduto, CorProduto, TIPO_PRODUTO_LABELS } from '../../types';
 import { Icon } from '../../components/Icon';
+import { normalizarProduto } from '../../utils/produto';
 
 const AdminProdutos = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -30,6 +31,7 @@ const AdminProdutos = () => {
     tamanhosDisponiveis: [] as TamanhoProduto[],
     coresDisponiveis: [] as CorProduto[],
     imagens: [] as string[],
+    imagensPorCor: {} as Partial<Record<CorProduto, string>>,
   });
   const [novaImagem, setNovaImagem] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -50,7 +52,7 @@ const AdminProdutos = () => {
       console.log('Categorias carregadas:', categoriasRes.data);
       console.log('Produtos carregados:', produtosRes.data);
       setCategorias(categoriasRes.data || []);
-      setProdutos(produtosRes.data || []);
+      setProdutos((produtosRes.data || []).map((p: Record<string, unknown>) => normalizarProduto(p)));
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
       mostrarAlert('danger', `Erro ao carregar dados: ${error.message || 'Erro desconhecido'}`);
@@ -157,6 +159,7 @@ const AdminProdutos = () => {
         tamanhosDisponiveis: [...produto.tamanhosDisponiveis],
         coresDisponiveis: [...produto.coresDisponiveis],
         imagens: [...produto.imagens],
+        imagensPorCor: { ...(produto.imagensPorCor ?? {}) },
       });
     } else {
       setProdutoEditando(null);
@@ -171,6 +174,7 @@ const AdminProdutos = () => {
         tamanhosDisponiveis: [],
         coresDisponiveis: [],
         imagens: [],
+        imagensPorCor: {},
       });
     }
     setShowProdutoModal(true);
@@ -204,6 +208,9 @@ const AdminProdutos = () => {
         TamanhosDisponiveis: produtoForm.tamanhosDisponiveis,
         CoresDisponiveis: produtoForm.coresDisponiveis,
         Imagens: produtoForm.imagens,
+        ImagensPorCor: Object.entries(produtoForm.imagensPorCor)
+          .filter(([cor, url]) => produtoForm.coresDisponiveis.includes(Number(cor) as CorProduto) && url)
+          .map(([cor, url]) => ({ Cor: Number(cor), Url: url })),
       };
 
       console.log('Enviando dados:', dados);
@@ -257,9 +264,11 @@ const AdminProdutos = () => {
   const toggleCor = (cor: CorProduto) => {
     const index = produtoForm.coresDisponiveis.indexOf(cor);
     if (index > -1) {
+      const { [cor]: _, ...restoImagensPorCor } = produtoForm.imagensPorCor;
       setProdutoForm({
         ...produtoForm,
         coresDisponiveis: produtoForm.coresDisponiveis.filter(c => c !== cor),
+        imagensPorCor: restoImagensPorCor,
       });
     } else {
       setProdutoForm({
@@ -267,6 +276,16 @@ const AdminProdutos = () => {
         coresDisponiveis: [...produtoForm.coresDisponiveis, cor],
       });
     }
+  };
+
+  const definirImagemCor = (cor: CorProduto, url: string) => {
+    setProdutoForm({
+      ...produtoForm,
+      imagensPorCor: {
+        ...produtoForm.imagensPorCor,
+        [cor]: url,
+      },
+    });
   };
 
   const adicionarImagem = () => {
@@ -383,7 +402,9 @@ const AdminProdutos = () => {
                           <td>{produto.nome}</td>
                           <td>{produto.categoria?.nome || '-'}</td>
                           <td>
-                            <Badge bg="secondary">{produto.tipoProduto}</Badge>
+                            <Badge bg="secondary">
+                              {TIPO_PRODUTO_LABELS[produto.tipoProduto as TipoProduto] ?? produto.tipoProduto}
+                            </Badge>
                           </td>
                           <td>R$ {produto.preco.toFixed(2)}</td>
                           <td>{produto.estoque}</td>
@@ -507,7 +528,7 @@ const AdminProdutos = () => {
                 type="text"
                 value={categoriaForm.nome}
                 onChange={(e) => setCategoriaForm({ ...categoriaForm, nome: e.target.value })}
-                placeholder="Ex: Camisetas Religiosas"
+                placeholder="Ex: Camisetas"
                 required
               />
             </Form.Group>
@@ -625,8 +646,11 @@ const AdminProdutos = () => {
                   onChange={(e) => setProdutoForm({ ...produtoForm, tipoProduto: Number(e.target.value) as TipoProduto })}
                   required
                 >
-                  <option value={TipoProduto.Camiseta}>Camiseta</option>
-                  <option value={TipoProduto.Caneca}>Caneca</option>
+                  {Object.entries(TIPO_PRODUTO_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
                 </Form.Select>
               </Form.Group>
             </div>
@@ -750,6 +774,42 @@ const AdminProdutos = () => {
                 </div>
               )}
             </Form.Group>
+
+            {produtoForm.coresDisponiveis.length > 0 && produtoForm.imagens.length > 0 && (
+              <Form.Group className="mb-3">
+                <Form.Label>Imagem por cor</Form.Label>
+                <Form.Text className="text-muted d-block mb-2">
+                  Escolha qual foto aparece quando o cliente seleciona cada cor na loja.
+                </Form.Text>
+                {produtoForm.coresDisponiveis.map((cor) => (
+                  <div key={cor} className="d-flex align-items-center gap-2 mb-2">
+                    <span className="text-nowrap" style={{ minWidth: '5rem' }}>
+                      {CorProduto[cor]}
+                    </span>
+                    <Form.Select
+                      value={produtoForm.imagensPorCor[cor] ?? ''}
+                      onChange={(e) => definirImagemCor(cor, e.target.value)}
+                      size="sm"
+                    >
+                      <option value="">Automático (padrão)</option>
+                      {produtoForm.imagens.map((img, index) => (
+                        <option key={index} value={img}>
+                          Imagem {index + 1}
+                          {img.length > 60 ? ` — ${img.slice(0, 60)}…` : ` — ${img}`}
+                        </option>
+                      ))}
+                    </Form.Select>
+                    {produtoForm.imagensPorCor[cor] && (
+                      <img
+                        src={produtoForm.imagensPorCor[cor]}
+                        alt={CorProduto[cor]}
+                        style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </Form.Group>
+            )}
 
             <Form.Check
               type="switch"

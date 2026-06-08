@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { CarrinhoProvider } from './context/CarrinhoContext';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
@@ -10,39 +10,60 @@ import AdminDashboard from './pages/Admin/Dashboard';
 import AdminProdutos from './pages/Admin/Produtos';
 import AdminPedidos from './pages/Admin/Pedidos';
 import AdminClientes from './pages/Admin/Clientes';
+import NossaHistoria from './pages/NossaHistoria';
+import Atendimento from './pages/Atendimento';
+import PagamentoStatus from './pages/PagamentoStatus';
+import Pagamento from './pages/Pagamento';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import WhatsAppButton from './components/WhatsAppButton';
 import ProtectedRoute from './components/ProtectedRoute';
+
+function AppContent() {
+  const location = useLocation();
+  const showWhatsApp = !location.pathname.startsWith('/admin');
+
+  return (
+    <div className="d-flex flex-column min-vh-100">
+      <Navbar />
+      <main className="flex-grow-1">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/produto/:id" element={<ProdutoDetalhes />} />
+          <Route path="/carrinho" element={<Carrinho />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/nossa-historia" element={<NossaHistoria />} />
+          <Route path="/atendimento" element={<Atendimento />} />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <Checkout />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/pagamento/pagar" element={<Pagamento />} />
+          <Route path="/pagamento/sucesso" element={<PagamentoStatus variant="sucesso" />} />
+          <Route path="/pagamento/pendente" element={<PagamentoStatus variant="pendente" />} />
+          <Route path="/pagamento/falha" element={<PagamentoStatus variant="falha" />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/produtos" element={<AdminProdutos />} />
+          <Route path="/admin/pedidos" element={<AdminPedidos />} />
+          <Route path="/admin/clientes" element={<AdminClientes />} />
+        </Routes>
+      </main>
+      <Footer />
+      {showWhatsApp && <WhatsAppButton />}
+    </div>
+  );
+}
 
 function App() {
   return (
     <AuthProvider>
       <CarrinhoProvider>
         <Router>
-          <div className="d-flex flex-column min-vh-100">
-            <Navbar />
-            <main className="flex-grow-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/produto/:id" element={<ProdutoDetalhes />} />
-                <Route path="/carrinho" element={<Carrinho />} />
-                <Route path="/login" element={<Login />} />
-                <Route
-                  path="/checkout"
-                  element={
-                    <ProtectedRoute>
-                      <Checkout />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/produtos" element={<AdminProdutos />} />
-                <Route path="/admin/pedidos" element={<AdminPedidos />} />
-                <Route path="/admin/clientes" element={<AdminClientes />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
+          <AppContent />
         </Router>
       </CarrinhoProvider>
     </AuthProvider>

@@ -47,10 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (cliente) {
         const usuarioData: Usuario = {
-          id: cliente.id,
-          nome: cliente.nome,
-          email: cliente.email,
-          telefoneCelular: cliente.telefoneCelular,
+          id: cliente.id ?? cliente.Id,
+          nome: cliente.nome ?? cliente.Nome,
+          email: cliente.email ?? cliente.Email,
+          telefoneCelular: cliente.telefoneCelular ?? cliente.TelefoneCelular,
         };
         setUsuario(usuarioData);
         localStorage.setItem('usuario', JSON.stringify(usuarioData));
@@ -88,10 +88,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const cliente = response.data;
       const usuarioData: Usuario = {
-        id: cliente.id,
-        nome: cliente.nome,
-        email: cliente.email,
-        telefoneCelular: cliente.telefoneCelular,
+        id: cliente.id ?? cliente.Id,
+        nome: cliente.nome ?? cliente.Nome,
+        email: cliente.email ?? cliente.Email,
+        telefoneCelular: cliente.telefoneCelular ?? cliente.TelefoneCelular,
       };
       setUsuario(usuarioData);
       localStorage.setItem('usuario', JSON.stringify(usuarioData));

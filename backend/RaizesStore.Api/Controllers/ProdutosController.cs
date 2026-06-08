@@ -78,6 +78,13 @@ public class ProdutosController : ControllerBase
             produto.AdicionarImagem(imagem);
         }
 
+        produto.LimparImagensPorCor();
+        foreach (var item in dto.ImagensPorCor ?? new List<ImagemPorCorDto>())
+        {
+            if (!string.IsNullOrWhiteSpace(item.Url))
+                produto.DefinirImagemCor(item.Cor, item.Url.Trim());
+        }
+
         _context.Produtos.Add(produto);
         await _context.SaveChangesAsync();
 
@@ -116,6 +123,13 @@ public class ProdutosController : ControllerBase
             produto.AdicionarImagem(imagem);
         }
 
+        produto.LimparImagensPorCor();
+        foreach (var item in dto.ImagensPorCor ?? new List<ImagemPorCorDto>())
+        {
+            if (!string.IsNullOrWhiteSpace(item.Url))
+                produto.DefinirImagemCor(item.Cor, item.Url.Trim());
+        }
+
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -149,6 +163,7 @@ public class CreateProdutoDto
     public List<TamanhoProduto>? TamanhosDisponiveis { get; set; }
     public List<CorProduto>? CoresDisponiveis { get; set; }
     public List<string>? Imagens { get; set; }
+    public List<ImagemPorCorDto>? ImagensPorCor { get; set; }
 }
 
 public class UpdateProdutoDto
@@ -162,4 +177,11 @@ public class UpdateProdutoDto
     public List<TamanhoProduto>? TamanhosDisponiveis { get; set; }
     public List<CorProduto>? CoresDisponiveis { get; set; }
     public List<string>? Imagens { get; set; }
+    public List<ImagemPorCorDto>? ImagensPorCor { get; set; }
+}
+
+public class ImagemPorCorDto
+{
+    public CorProduto Cor { get; set; }
+    public string Url { get; set; } = string.Empty;
 }
