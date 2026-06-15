@@ -6,7 +6,6 @@ export const categoriasDemo: Categoria[] = [
   { id: 'demo-2', nome: 'Canecas', descricao: 'Canecas personalizadas para qualquer ocasião', ativo: true, ordem: 2 },
 ];
 
-const imgCaneca = 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=600&h=600&fit=crop';
 const imgCanecaEmpresaBranca = '/images/produtos/caneca-empresa-branca.png';
 const imgCanecaEmpresaPreta = '/images/produtos/caneca-empresa-preta.png';
 

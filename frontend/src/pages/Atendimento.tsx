@@ -1,5 +1,5 @@
 import { Container, Row, Col, Card, Button } from 'react-bootstrap';
-import { FiMessageCircle, FiMail, FiClock, FiInstagram } from 'react-icons/fi';
+import { FiMessageCircle, FiMail, FiClock } from 'react-icons/fi';
 import { Icon } from '../components/Icon';
 import { LOJA, whatsappLink } from '../config/loja';
 

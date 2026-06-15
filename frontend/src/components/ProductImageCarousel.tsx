@@ -13,10 +13,11 @@ const ProductImageCarousel = ({
   carouselKey,
 }: ProductImageCarouselProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const imagensKey = imagens.join('|');
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [carouselKey, imagens.join('|')]);
+  }, [carouselKey, imagensKey]);
 
   if (!imagens.length) {
     return (
