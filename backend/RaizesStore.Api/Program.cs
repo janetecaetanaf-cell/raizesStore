@@ -116,9 +116,9 @@ builder.Services.AddHttpClient<RaizesStore.Api.Services.IPagSeguroService, Raize
             var userInfo = uri.UserInfo.Split(':', 2);
             var username = Uri.UnescapeDataString(userInfo[0]);
             var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
-            var port = uri.Port > 0 ? uri.Port : 5432;
-            connectionString = $"Host={uri.Host};Port={port};Database={dbName};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
-            Console.WriteLine($"Conectando ao banco: {uri.Host}:{port}/{dbName}");
+            var dbPort = uri.Port > 0 ? uri.Port : 5432;
+            connectionString = $"Host={uri.Host};Port={dbPort};Database={dbName};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+            Console.WriteLine($"Conectando ao banco: {uri.Host}:{dbPort}/{dbName}");
         }
         catch (Exception ex)
         {
