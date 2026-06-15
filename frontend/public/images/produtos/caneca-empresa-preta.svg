@@ -1,0 +1,12 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="600" fill="#F3F0EB"/>
+  <ellipse cx="300" cy="520" rx="120" ry="18" fill="#000" opacity="0.08"/>
+  <path d="M175 180 L175 460 C175 490 210 510 300 510 C390 510 425 490 425 460 L425 180 C425 150 390 130 300 130 C210 130 175 150 175 180Z" fill="#1A1A1A" stroke="#333333" stroke-width="3"/>
+  <path d="M425 220 C470 220 505 255 505 300 C505 345 470 380 425 380" fill="none" stroke="#333333" stroke-width="14" stroke-linecap="round"/>
+  <path d="M425 220 C470 220 505 255 505 300 C505 345 470 380 425 380" fill="none" stroke="#1A1A1A" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="300" cy="180" rx="125" ry="28" fill="#111111" stroke="#333333" stroke-width="3"/>
+  <rect x="215" y="255" width="170" height="110" rx="8" fill="#252525" stroke="#C9A227" stroke-width="2" stroke-dasharray="8 5"/>
+  <text x="300" y="300" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#E8D48B">Sua Logo</text>
+  <text x="300" y="332" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#E8D48B">Aqui</text>
+  <text x="300" y="358" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#C9A227" letter-spacing="2">RAÍZES ESTAMPAS</text>
+</svg>

@@ -6,7 +6,7 @@ const items = [
   {
     icon: FiTruck,
     title: 'Enviamos para todo o Brasil',
-    text: 'Receba seus artigos religiosos com carinho em casa',
+    text: 'Receba suas estampas personalizadas com carinho em casa',
   },
   {
     icon: FiCreditCard,
@@ -16,7 +16,7 @@ const items = [
   {
     icon: FiShield,
     title: 'Compra segura',
-    text: 'Atendimento respeitoso e humanizado',
+    text: 'Atendimento ágil e ajuda na criação da sua estampa',
   },
   {
     icon: FiMessageCircle,

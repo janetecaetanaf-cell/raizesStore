@@ -1,18 +1,23 @@
+import { useEffect, useState } from 'react';
 import { Carousel } from 'react-bootstrap';
 
 interface ProductImageCarouselProps {
   imagens: string[];
   alt: string;
-  activeIndex?: number;
   carouselKey?: string;
 }
 
 const ProductImageCarousel = ({
   imagens,
   alt,
-  activeIndex = 0,
   carouselKey,
 }: ProductImageCarouselProps) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [carouselKey, imagens.join('|')]);
+
   if (!imagens.length) {
     return (
       <div className="product-carousel-placeholder">
@@ -33,14 +38,16 @@ const ProductImageCarousel = ({
     <Carousel
       key={carouselKey ?? imagens.join('-')}
       activeIndex={activeIndex}
+      onSelect={setActiveIndex}
       interval={null}
       indicators
       controls
       className="product-carousel"
       variant="dark"
+      touch
     >
       {imagens.map((img, index) => (
-        <Carousel.Item key={`${img}-${index}`}>
+        <Carousel.Item key={`${carouselKey ?? 'slide'}-${index}`}>
           <img
             src={img}
             alt={`${alt} — foto ${index + 1}`}

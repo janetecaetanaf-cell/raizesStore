@@ -1,0 +1,10 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="600" fill="#FAF7F2"/>
+  <path d="M120 130 C120 130 155 95 300 95 C445 95 480 130 480 130 L520 175 L465 205 L445 175 L445 480 C445 500 425 515 300 515 C175 515 155 500 155 480 L155 175 L135 205 L80 175 L120 130Z" fill="#F5F5F5" stroke="#D8D2C8" stroke-width="3"/>
+  <path d="M230 95 C230 95 250 125 300 125 C350 125 370 95 370 95" stroke="#D8D2C8" stroke-width="3" fill="none"/>
+  <path d="M120 130 L80 175 L135 205" fill="#EBEBEB" stroke="#D8D2C8" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M480 130 L520 175 L465 205" fill="#EBEBEB" stroke="#D8D2C8" stroke-width="3" stroke-linejoin="round"/>
+  <text x="300" y="268" text-anchor="middle" font-family="Georgia, serif" font-size="30" font-style="italic" font-weight="600" fill="#4A1942">Para</text>
+  <text x="300" y="312" text-anchor="middle" font-family="Georgia, serif" font-size="30" font-style="italic" font-weight="600" fill="#4A1942">sempre</text>
+  <text x="300" y="345" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#C9A227">&#9829;</text>
+</svg>

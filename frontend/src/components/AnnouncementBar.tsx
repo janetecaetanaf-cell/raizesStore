@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { LOJA } from '../config/loja';
 
 const mensagens = [
-  `✨ Bem-vindos à ${LOJA.nome} • estampas e artigos religiosos`,
-  '🕯️ Presentes espirituais para fortalecer sua fé e sua casa',
+  `✨ Bem-vindos à ${LOJA.nome} • estampas personalizadas para camisetas e canecas`,
+  '🎨 Criamos estampas para aniversários, empresas, eventos e qualquer tema',
   `📦 Enviamos para todo o Brasil • WhatsApp ${LOJA.whatsappDisplay}`,
 ];
 

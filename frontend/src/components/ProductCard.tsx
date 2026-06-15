@@ -43,7 +43,7 @@ const ProductCard = ({ produto, onComprar }: ProductCardProps) => {
           />
         ) : (
           <div className="product-image product-image-placeholder">
-            <span>🕯️</span>
+            <span>👕</span>
           </div>
         )}
       </div>

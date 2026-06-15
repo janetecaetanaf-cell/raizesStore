@@ -76,8 +76,8 @@ const Atendimento = () => {
               <div className="faq-item">
                 <h6>Como funciona a personalização?</h6>
                 <p>
-                  Envie sua ideia pelo WhatsApp — nome, orixá, frase ou foto. Nossa equipe
-                  cria a arte sem custo adicional e envia para aprovação antes da produção.
+                  Envie sua ideia pelo WhatsApp — nome, frase, logo ou foto. Nossa equipe
+                  cria a estampa sem custo adicional e envia para aprovação antes da produção.
                 </p>
               </div>
               <div className="faq-item">

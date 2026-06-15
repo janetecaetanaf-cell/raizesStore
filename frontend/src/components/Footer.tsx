@@ -9,11 +9,11 @@ const Footer = () => {
         <Row className="g-4">
           <Col md={4}>
             <div className="footer-brand">
-              <span className="brand-icon">☽</span>
+              <span className="brand-icon">✦</span>
               <span>{LOJA.nome}</span>
             </div>
             <p className="footer-tagline">
-              Artigos religiosos e presentes espirituais feitos com respeito e carinho.
+              Estampas personalizadas para camisetas e canecas — qualquer tema, do seu jeito.
             </p>
           </Col>
           <Col md={4}>

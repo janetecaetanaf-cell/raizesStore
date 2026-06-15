@@ -25,7 +25,7 @@ const Navbar = () => {
       <BootstrapNavbar expand="lg" className="store-navbar sticky-top">
         <Container>
           <BootstrapNavbar.Brand as={Link} to="/" className="store-brand">
-            <span className="brand-icon">☽</span>
+            <span className="brand-icon">✦</span>
             <span className="brand-text">
               <strong>Raízes</strong>
               <small>Estampas</small>
@@ -39,17 +39,15 @@ const Navbar = () => {
               {!isAdmin ? (
                 <>
                   <Nav.Link as={Link} to="/">Início</Nav.Link>
-                  <NavDropdown title="Artigos" id="nav-artigos">
-                    <NavDropdown.Item as={Link} to="/?cat=velas">Velas e Incensos</NavDropdown.Item>
-                    <NavDropdown.Item as={Link} to="/?cat=guias">Guias e Fios</NavDropdown.Item>
-                    <NavDropdown.Item as={Link} to="/?cat=imagens">Imagens e Quadros</NavDropdown.Item>
+                  <NavDropdown title="Produtos" id="nav-produtos">
+                    <NavDropdown.Item as={Link} to="/#destaques">Ver catálogo</NavDropdown.Item>
                     <NavDropdown.Divider />
-                    <NavDropdown.Item as={Link} to="/#destaques">Ver tudo</NavDropdown.Item>
+                    <NavDropdown.Item as={Link} to="/#destaques">Camisetas</NavDropdown.Item>
+                    <NavDropdown.Item as={Link} to="/#destaques">Canecas</NavDropdown.Item>
                   </NavDropdown>
-                  <NavDropdown title="Personalizados" id="nav-personalizados">
-                    <NavDropdown.Item as={Link} to="/?cat=canecas">Canecas</NavDropdown.Item>
-                    <NavDropdown.Item as={Link} to="/?cat=camisetas">Camisetas</NavDropdown.Item>
-                    <NavDropdown.Item as={Link} to="/atendimento">Serviços de Personalização</NavDropdown.Item>
+                  <NavDropdown title="Personalização" id="nav-personalizados">
+                    <NavDropdown.Item as={Link} to="/atendimento">Crie sua estampa</NavDropdown.Item>
+                    <NavDropdown.Item as={Link} to="/atendimento">Pedidos especiais</NavDropdown.Item>
                   </NavDropdown>
                   <Nav.Link as={Link} to="/nossa-historia">Nossa História</Nav.Link>
                   <Nav.Link as={Link} to="/atendimento">Atendimento</Nav.Link>

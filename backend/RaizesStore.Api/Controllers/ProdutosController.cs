@@ -17,11 +17,19 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos([FromQuery] Guid? categoriaId, [FromQuery] TipoProduto? tipoProduto)
+    public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos(
+        [FromQuery] Guid? categoriaId,
+        [FromQuery] TipoProduto? tipoProduto,
+        [FromQuery] bool incluirInativos = false)
     {
         var query = _context.Produtos
             .Include(p => p.Categoria)
-            .Where(p => p.Ativo && p.DeletedAt == null);
+            .Where(p => p.DeletedAt == null);
+
+        if (!incluirInativos)
+        {
+            query = query.Where(p => p.Ativo);
+        }
 
         if (categoriaId.HasValue)
         {
@@ -129,6 +137,11 @@ public class ProdutosController : ControllerBase
             if (!string.IsNullOrWhiteSpace(item.Url))
                 produto.DefinirImagemCor(item.Cor, item.Url.Trim());
         }
+
+        _context.Entry(produto).Property(p => p.Imagens).IsModified = true;
+        _context.Entry(produto).Property(p => p.ImagensPorCor).IsModified = true;
+        _context.Entry(produto).Property(p => p.TamanhosDisponiveis).IsModified = true;
+        _context.Entry(produto).Property(p => p.CoresDisponiveis).IsModified = true;
 
         await _context.SaveChangesAsync();
 

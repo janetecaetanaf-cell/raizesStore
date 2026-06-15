@@ -9,26 +9,26 @@ const NossaHistoria = () => {
             <h1 className="static-page-title">Nossa História</h1>
             <div className="static-page-content">
               <p>
-                A <strong>Raízes Estampas</strong> nasceu do desejo de levar
-                estampas e artigos religiosos com qualidade, respeito e carinho
-                para simpatizantes das religiões afro-brasileiras.
+                A <strong>Raízes Estampas</strong> nasceu da paixão por transformar
+                ideias em estampas únicas — em camisetas, canecas e presentes
+                personalizados para qualquer ocasião.
               </p>
               <p>
-                Somos uma loja especializada em produtos de Umbanda: velas,
-                guias de contas, imagens de orixás e entidades, incensos e itens
-                personalizados como canecas e camisetas.
+                Somos especialistas em estamparia personalizada: criamos artes para
+                aniversários, casamentos, empresas, times, pets, datas comemorativas
+                e muito mais. Cada peça é pensada para contar a sua história.
               </p>
               <p>
-                Cada peça é pensada para honrar a tradição. Trabalhamos com
-                materiais de qualidade e oferecemos personalização para que você
-                expresse sua devoção do seu jeito.
+                Trabalhamos com materiais de qualidade e oferecemos ajuda na criação
+                da arte, para que você tenha um produto exclusivo, do jeito que
+                imaginou.
               </p>
               <p>
-                Nossa missão é ser ponte entre o sagrado e o cotidiano,
-                fortalecendo sua fé, presenteando quem você ama e nos momentos
-                em que a tradição pede presença e intenção.
+                Nossa missão é levar criatividade e personalização para o dia a
+                dia — seja para presentear quem você ama, uniformizar sua equipe
+                ou marcar um momento especial.
               </p>
-              <p className="static-page-signature">☽ ✦ ☾</p>
+              <p className="static-page-signature">✦ Raízes Estampas ✦</p>
             </div>
           </Col>
         </Row>

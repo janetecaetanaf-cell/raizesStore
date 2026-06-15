@@ -92,7 +92,7 @@ const ProdutoDetalhes = () => {
     [produto, corSelecionada, coresDisponiveis]
   );
 
-  const carouselKey = `${produto?.id ?? 'prod'}-${corSelecionada || 'default'}`;
+  const carouselKey = `${produto?.id ?? 'prod'}-${corSelecionada || 'default'}-${imagensExibidas.length}`;
 
   const handleAdicionarAoCarrinho = () => {
     if (!estaAutenticado) {

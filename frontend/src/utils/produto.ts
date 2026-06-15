@@ -49,6 +49,36 @@ export const CORES_PADRAO_CAMISETA = [
 
 export const CORES_PADRAO_CANECA = [CorProduto.Branco, CorProduto.Preto, CorProduto.Azul];
 
+export const CAMISETA_PLACEHOLDER_DEFAULT = '/images/produtos/camiseta-sua-ideia-branca.png';
+
+export const CAMISETA_PLACEHOLDER_POR_COR: Partial<Record<CorProduto, string>> = {
+  [CorProduto.Branco]: '/images/produtos/camiseta-sua-ideia-branca.png',
+  [CorProduto.Preto]: '/images/produtos/camiseta-sua-ideia-preta.png',
+  [CorProduto.Verde]: '/images/produtos/camiseta-sua-ideia-verde.svg',
+  [CorProduto.Rosa]: '/images/produtos/camiseta-sua-ideia-rosa.png',
+  [CorProduto.Bege]: '/images/produtos/camiseta-sua-ideia-bege.svg',
+};
+
+export const getCamisetaPlaceholder = (cor?: CorProduto) =>
+  (cor != null && CAMISETA_PLACEHOLDER_POR_COR[cor]) || CAMISETA_PLACEHOLDER_DEFAULT;
+
+export const buildImagensCamiseta = (cores: CorProduto[]) => {
+  const imagensPorCor = cores.reduce((acc, cor) => {
+    const img = getCamisetaPlaceholder(cor);
+    if (img) acc[cor] = img;
+    return acc;
+  }, {} as Partial<Record<CorProduto, string>>);
+
+  const imagens = cores
+    .map((cor) => getCamisetaPlaceholder(cor))
+    .filter((img, idx, arr) => arr.indexOf(img) === idx);
+
+  return {
+    imagens: imagens.length > 0 ? imagens : [CAMISETA_PLACEHOLDER_DEFAULT],
+    imagensPorCor,
+  };
+};
+
 const COR_SLUGS: Record<CorProduto, string[]> = {
   [CorProduto.Branco]: ['branco', 'white'],
   [CorProduto.Preto]: ['preto', 'black'],
@@ -113,14 +143,20 @@ export const getImagensExibidas = (
   corSelecionada: CorProduto | '',
   coresDisponiveis: CorProduto[]
 ): string[] => {
-  if (!produto.imagens.length) return [];
+  const todasImagens = [...produto.imagens];
+  const porCor = Object.values(produto.imagensPorCor ?? {}).filter(Boolean) as string[];
+  porCor.forEach((img) => {
+    if (!todasImagens.includes(img)) todasImagens.push(img);
+  });
 
-  if (!corSelecionada) return produto.imagens;
+  if (todasImagens.length === 0) return [];
+
+  if (!corSelecionada) return todasImagens;
 
   const imagemCor = getImagemDaCor(produto, corSelecionada, coresDisponiveis);
-  if (!imagemCor) return produto.imagens;
+  if (!imagemCor) return todasImagens;
 
-  const restantes = produto.imagens.filter((img) => img !== imagemCor);
+  const restantes = todasImagens.filter((img) => img !== imagemCor);
   return [imagemCor, ...restantes];
 };
 

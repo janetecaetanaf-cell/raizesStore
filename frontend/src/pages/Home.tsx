@@ -2,16 +2,40 @@ import { useState, useEffect } from "react";
 import { Container, Row, Col, Nav } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { Produto, Categoria } from "../types";
+import { Produto, Categoria, TipoProduto } from "../types";
 import { produtosDemo, categoriasDemo } from "../data/demoProdutos";
 import { normalizarProduto } from "../utils/produto";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
 
-const CATEGORIAS_OCULTAS = ["Camisetas Religiosas", "Kits Ritualísticos"];
+const CATEGORIAS_OCULTAS = [
+  "Camisetas Religiosas",
+  "Kits Ritualísticos",
+  "Velas e Incensos",
+  "Guias e Fios",
+  "Imagens e Quadros",
+];
 
 const filtrarCategorias = (cats: Categoria[]) =>
   cats.filter((c) => !CATEGORIAS_OCULTAS.includes(c.nome));
+
+const DESTAQUES_POR_TIPO = 4;
+
+/** Na aba Todos: equilibra camisetas e canecas; em categoria específica, mostra até 8 itens. */
+const selecionarDestaques = (lista: Produto[], categoriaId: string): Produto[] => {
+  if (categoriaId) {
+    return lista.slice(0, 8);
+  }
+
+  const camisetas = lista
+    .filter((p) => p.tipoProduto === TipoProduto.Camiseta)
+    .slice(0, DESTAQUES_POR_TIPO);
+  const canecas = lista
+    .filter((p) => p.tipoProduto === TipoProduto.Caneca)
+    .slice(0, DESTAQUES_POR_TIPO);
+
+  return [...camisetas, ...canecas];
+};
 
 const Home = () => {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -27,11 +51,10 @@ const Home = () => {
 
   useEffect(() => {
     if (usandoDemo) {
-      setProdutos(
-        categoriaSelecionada
-          ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
-          : produtosDemo,
-      );
+      const filtrados = categoriaSelecionada
+        ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
+        : produtosDemo;
+      setProdutos(selecionarDestaques(filtrados, categoriaSelecionada));
       return;
     }
 
@@ -41,11 +64,10 @@ const Home = () => {
 
   const aplicarDemo = () => {
     setCategorias(filtrarCategorias(categoriasDemo));
-    setProdutos(
-      categoriaSelecionada
-        ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
-        : produtosDemo,
-    );
+    const filtrados = categoriaSelecionada
+      ? produtosDemo.filter((p) => p.categoriaId === categoriaSelecionada)
+      : produtosDemo;
+    setProdutos(selecionarDestaques(filtrados, categoriaSelecionada));
     setUsandoDemo(true);
   };
 
@@ -58,11 +80,10 @@ const Home = () => {
 
       if (categoriasRes.data?.length > 0 && produtosRes.data?.length > 0) {
         setCategorias(filtrarCategorias(categoriasRes.data));
-        setProdutos(
-          produtosRes.data.map((p: Record<string, unknown>) =>
-            normalizarProduto(p),
-          ),
+        const lista = produtosRes.data.map((p: Record<string, unknown>) =>
+          normalizarProduto(p),
         );
+        setProdutos(selecionarDestaques(lista, ""));
         setUsandoDemo(false);
         return;
       }
@@ -81,11 +102,10 @@ const Home = () => {
 
       const response = await api.get("/produtos", { params });
       if (response.data?.length > 0) {
-        setProdutos(
-          response.data.map((p: Record<string, unknown>) =>
-            normalizarProduto(p),
-          ),
+        const lista = response.data.map((p: Record<string, unknown>) =>
+          normalizarProduto(p),
         );
+        setProdutos(selecionarDestaques(lista, categoriaSelecionada));
         return;
       }
     } catch {
@@ -93,7 +113,7 @@ const Home = () => {
     }
   };
 
-  const destaques = produtos.slice(0, 8);
+  const destaques = produtos;
 
   return (
     <>
@@ -103,11 +123,11 @@ const Home = () => {
         <Container className="hero-banner-content">
           <Row className="align-items-center">
             <Col lg={7}>
-              <p className="hero-eyebrow">Artigos religiosos</p>
-              <h1 className="hero-headline">Presentes que fortalecem a fé</h1>
+              <p className="hero-eyebrow">Estampas personalizadas</p>
+              <h1 className="hero-headline">Sua ideia estampada do seu jeito</h1>
               <p className="hero-description">
-                Velas, incensos, guias, imagens de orixás, camisetas e canecas —
-                tudo feito com respeito à tradição da Umbanda.
+                Criamos estampas exclusivas para camisetas e canecas — aniversários,
+                empresas, times, pets, eventos e qualquer tema que você imaginar.
               </p>
               <button
                 type="button"
@@ -122,7 +142,7 @@ const Home = () => {
               </button>
             </Col>
             <Col lg={5} className="d-none d-lg-block">
-              <div className="hero-symbol">☽ ✦ ☾</div>
+              <div className="hero-symbol">✦ 🎨 ✦</div>
             </Col>
           </Row>
         </Container>
@@ -193,9 +213,8 @@ const Home = () => {
             <Col md={8}>
               <h3>Personalizamos do seu jeito</h3>
               <p>
-                Canecas, camisetas, guias e imagens com nomes, orixás, frases
-                sagradas e artes exclusivas. Ajuda na criação da arte sem custo
-                adicional.
+                Camisetas e canecas com nomes, frases, logos, fotos e artes
+                exclusivas. Ajuda na criação da estampa sem custo adicional.
               </p>
             </Col>
             <Col md={4} className="text-md-end mt-3 mt-md-0">

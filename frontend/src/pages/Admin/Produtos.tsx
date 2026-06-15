@@ -47,7 +47,7 @@ const AdminProdutos = () => {
     try {
       const [categoriasRes, produtosRes] = await Promise.all([
         api.get('/categorias'),
-        api.get('/produtos'),
+        api.get('/produtos', { params: { incluirInativos: true } }),
       ]);
       console.log('Categorias carregadas:', categoriasRes.data);
       console.log('Produtos carregados:', produtosRes.data);
@@ -182,6 +182,19 @@ const AdminProdutos = () => {
 
   const salvarProduto = async () => {
     try {
+      if (uploadingImage) {
+        mostrarAlert('danger', 'Aguarde o upload da imagem terminar antes de salvar');
+        return;
+      }
+
+      const imagensParaSalvar = novaImagem.trim()
+        ? [...produtoForm.imagens, novaImagem.trim()]
+        : [...produtoForm.imagens];
+
+      if (novaImagem.trim()) {
+        setNovaImagem('');
+      }
+
       // Validar campos obrigatórios
       if (!produtoForm.nome.trim()) {
         mostrarAlert('danger', 'O nome do produto é obrigatório');
@@ -207,7 +220,7 @@ const AdminProdutos = () => {
         Estoque: produtoForm.estoque,
         TamanhosDisponiveis: produtoForm.tamanhosDisponiveis,
         CoresDisponiveis: produtoForm.coresDisponiveis,
-        Imagens: produtoForm.imagens,
+        Imagens: imagensParaSalvar,
         ImagensPorCor: Object.entries(produtoForm.imagensPorCor)
           .filter(([cor, url]) => produtoForm.coresDisponiveis.includes(Number(cor) as CorProduto) && url)
           .map(([cor, url]) => ({ Cor: Number(cor), Url: url })),
@@ -227,10 +240,20 @@ const AdminProdutos = () => {
       await carregarDados();
     } catch (error: any) {
       console.error('Erro ao salvar produto:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.title ||
-                          error.message || 
-                          'Erro ao salvar produto';
+      const data = error.response?.data;
+      let errorMessage = 'Erro ao salvar produto';
+      if (data?.errors) {
+        const detalhes = Object.entries(data.errors as Record<string, string[]>)
+          .map(([campo, msgs]) => `${campo}: ${msgs.join(', ')}`)
+          .join('; ');
+        errorMessage = detalhes || errorMessage;
+      } else if (data?.message) {
+        errorMessage = data.message;
+      } else if (data?.title) {
+        errorMessage = data.title;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       mostrarAlert('danger', `Erro: ${errorMessage}`);
     }
   };
@@ -247,53 +270,55 @@ const AdminProdutos = () => {
   };
 
   const toggleTamanho = (tamanho: TamanhoProduto) => {
-    const index = produtoForm.tamanhosDisponiveis.indexOf(tamanho);
-    if (index > -1) {
-      setProdutoForm({
-        ...produtoForm,
-        tamanhosDisponiveis: produtoForm.tamanhosDisponiveis.filter(t => t !== tamanho),
-      });
-    } else {
-      setProdutoForm({
-        ...produtoForm,
-        tamanhosDisponiveis: [...produtoForm.tamanhosDisponiveis, tamanho],
-      });
-    }
+    setProdutoForm((prev) => {
+      const index = prev.tamanhosDisponiveis.indexOf(tamanho);
+      if (index > -1) {
+        return {
+          ...prev,
+          tamanhosDisponiveis: prev.tamanhosDisponiveis.filter((t) => t !== tamanho),
+        };
+      }
+      return {
+        ...prev,
+        tamanhosDisponiveis: [...prev.tamanhosDisponiveis, tamanho],
+      };
+    });
   };
 
   const toggleCor = (cor: CorProduto) => {
-    const index = produtoForm.coresDisponiveis.indexOf(cor);
-    if (index > -1) {
-      const { [cor]: _, ...restoImagensPorCor } = produtoForm.imagensPorCor;
-      setProdutoForm({
-        ...produtoForm,
-        coresDisponiveis: produtoForm.coresDisponiveis.filter(c => c !== cor),
-        imagensPorCor: restoImagensPorCor,
-      });
-    } else {
-      setProdutoForm({
-        ...produtoForm,
-        coresDisponiveis: [...produtoForm.coresDisponiveis, cor],
-      });
-    }
+    setProdutoForm((prev) => {
+      const index = prev.coresDisponiveis.indexOf(cor);
+      if (index > -1) {
+        const { [cor]: _, ...restoImagensPorCor } = prev.imagensPorCor;
+        return {
+          ...prev,
+          coresDisponiveis: prev.coresDisponiveis.filter((c) => c !== cor),
+          imagensPorCor: restoImagensPorCor,
+        };
+      }
+      return {
+        ...prev,
+        coresDisponiveis: [...prev.coresDisponiveis, cor],
+      };
+    });
   };
 
   const definirImagemCor = (cor: CorProduto, url: string) => {
-    setProdutoForm({
-      ...produtoForm,
+    setProdutoForm((prev) => ({
+      ...prev,
       imagensPorCor: {
-        ...produtoForm.imagensPorCor,
+        ...prev.imagensPorCor,
         [cor]: url,
       },
-    });
+    }));
   };
 
   const adicionarImagem = () => {
     if (novaImagem.trim()) {
-      setProdutoForm({
-        ...produtoForm,
-        imagens: [...produtoForm.imagens, novaImagem.trim()],
-      });
+      setProdutoForm((prev) => ({
+        ...prev,
+        imagens: [...prev.imagens, novaImagem.trim()],
+      }));
       setNovaImagem('');
     }
   };
@@ -320,10 +345,10 @@ const AdminProdutos = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = reader.result as string;
-        setProdutoForm({
-          ...produtoForm,
-          imagens: [...produtoForm.imagens, base64String],
-        });
+        setProdutoForm((prev) => ({
+          ...prev,
+          imagens: [...prev.imagens, base64String],
+        }));
         setUploadingImage(false);
         mostrarAlert('success', 'Imagem adicionada com sucesso!');
       };
@@ -342,10 +367,30 @@ const AdminProdutos = () => {
   };
 
   const removerImagem = (index: number) => {
-    setProdutoForm({
-      ...produtoForm,
-      imagens: produtoForm.imagens.filter((_, i) => i !== index),
-    });
+    setProdutoForm((prev) => ({
+      ...prev,
+      imagens: prev.imagens.filter((_, i) => i !== index),
+    }));
+  };
+
+  const atualizarProdutoForm = <K extends keyof typeof produtoForm>(
+    campo: K,
+    valor: (typeof produtoForm)[K]
+  ) => {
+    setProdutoForm((prev) => ({ ...prev, [campo]: valor }));
+  };
+
+  const imagemPlaceholder =
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="60"%3E%3Crect width="60" height="60" fill="%23eee"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="10"%3ESem foto%3C/text%3E%3C/svg%3E';
+
+  const obterImagemProduto = (produto: Produto) => produto.imagens?.[0] ?? null;
+
+  const rotuloImagemProduto = (produto: Produto) => {
+    const img = obterImagemProduto(produto);
+    if (!img) return 'Sem imagem';
+    if (img.startsWith('data:')) return 'Imagem enviada (upload)';
+    if (img.length > 48) return `${img.slice(0, 48)}…`;
+    return img;
   };
 
   return (
@@ -380,6 +425,7 @@ const AdminProdutos = () => {
                 <Table striped hover responsive>
                   <thead>
                     <tr>
+                      <th style={{ width: 72 }}>Imagem</th>
                       <th>Nome</th>
                       <th>Categoria</th>
                       <th>Tipo</th>
@@ -392,13 +438,31 @@ const AdminProdutos = () => {
                   <tbody>
                     {produtos.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center py-4">
+                        <td colSpan={8} className="text-center py-4">
                           Nenhum produto cadastrado
                         </td>
                       </tr>
                     ) : (
                       produtos.map((produto) => (
                         <tr key={produto.id}>
+                          <td>
+                            <img
+                              src={obterImagemProduto(produto) ?? imagemPlaceholder}
+                              alt={produto.nome}
+                              title={rotuloImagemProduto(produto)}
+                              style={{
+                                width: 56,
+                                height: 56,
+                                objectFit: 'cover',
+                                borderRadius: 6,
+                                border: '1px solid #dee2e6',
+                                backgroundColor: '#f8f9fa',
+                              }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = imagemPlaceholder;
+                              }}
+                            />
+                          </td>
                           <td>{produto.nome}</td>
                           <td>{produto.categoria?.nome || '-'}</td>
                           <td>
@@ -585,7 +649,7 @@ const AdminProdutos = () => {
               <Form.Control
                 type="text"
                 value={produtoForm.nome}
-                onChange={(e) => setProdutoForm({ ...produtoForm, nome: e.target.value })}
+                onChange={(e) => atualizarProdutoForm('nome', e.target.value)}
                 placeholder="Ex: Camiseta Personalizada"
                 required
               />
@@ -596,7 +660,7 @@ const AdminProdutos = () => {
                 as="textarea"
                 rows={3}
                 value={produtoForm.descricao}
-                onChange={(e) => setProdutoForm({ ...produtoForm, descricao: e.target.value })}
+                onChange={(e) => atualizarProdutoForm('descricao', e.target.value)}
                 placeholder="Descrição do produto"
               />
             </Form.Group>
@@ -607,7 +671,7 @@ const AdminProdutos = () => {
                   type="number"
                   step="0.01"
                   value={produtoForm.preco}
-                  onChange={(e) => setProdutoForm({ ...produtoForm, preco: Number(e.target.value) })}
+                  onChange={(e) => atualizarProdutoForm('preco', Number(e.target.value))}
                   placeholder="0.00"
                   required
                 />
@@ -617,7 +681,7 @@ const AdminProdutos = () => {
                 <Form.Control
                   type="number"
                   value={produtoForm.estoque}
-                  onChange={(e) => setProdutoForm({ ...produtoForm, estoque: Number(e.target.value) })}
+                  onChange={(e) => atualizarProdutoForm('estoque', Number(e.target.value))}
                   placeholder="0"
                   required
                 />
@@ -628,7 +692,7 @@ const AdminProdutos = () => {
                 <Form.Label>Categoria *</Form.Label>
                 <Form.Select
                   value={produtoForm.categoriaId}
-                  onChange={(e) => setProdutoForm({ ...produtoForm, categoriaId: e.target.value })}
+                  onChange={(e) => atualizarProdutoForm('categoriaId', e.target.value)}
                   required
                 >
                   <option value="">Selecione uma categoria</option>
@@ -643,7 +707,7 @@ const AdminProdutos = () => {
                 <Form.Label>Tipo de Produto *</Form.Label>
                 <Form.Select
                   value={produtoForm.tipoProduto}
-                  onChange={(e) => setProdutoForm({ ...produtoForm, tipoProduto: Number(e.target.value) as TipoProduto })}
+                  onChange={(e) => atualizarProdutoForm('tipoProduto', Number(e.target.value) as TipoProduto)}
                   required
                 >
                   {Object.entries(TIPO_PRODUTO_LABELS).map(([value, label]) => (
@@ -746,7 +810,7 @@ const AdminProdutos = () => {
                     value={novaImagem}
                     onChange={(e) => setNovaImagem(e.target.value)}
                     placeholder="/produtos/imagem.jpg ou https://exemplo.com/imagem.jpg"
-                    onKeyPress={(e) => e.key === 'Enter' && adicionarImagem()}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), adicionarImagem())}
                   />
                   <Button variant="outline-primary" onClick={adicionarImagem}>
                     Adicionar
@@ -815,7 +879,7 @@ const AdminProdutos = () => {
               type="switch"
               label="Produto ativo"
               checked={produtoForm.ativo}
-              onChange={(e) => setProdutoForm({ ...produtoForm, ativo: e.target.checked })}
+              onChange={(e) => atualizarProdutoForm('ativo', e.target.checked)}
             />
           </Form>
         </Modal.Body>
@@ -824,9 +888,9 @@ const AdminProdutos = () => {
             <Icon icon={FiX} className="me-2" />
             Cancelar
           </Button>
-          <Button variant="primary" onClick={salvarProduto}>
+          <Button variant="primary" onClick={salvarProduto} disabled={uploadingImage}>
             <Icon icon={FiSave} className="me-2" />
-            Salvar
+            {uploadingImage ? 'Processando imagem...' : 'Salvar'}
           </Button>
         </Modal.Footer>
       </Modal>

@@ -1,0 +1,11 @@
+<svg width="600" height="600" viewBox="0 0 600 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="600" fill="#FAF7F2"/>
+  <path d="M120 130 C120 130 155 95 300 95 C445 95 480 130 480 130 L520 175 L465 205 L445 175 L445 480 C445 500 425 515 300 515 C175 515 155 500 155 480 L155 175 L135 205 L80 175 L120 130Z" fill="#D4C4A8" stroke="#B8A88C" stroke-width="3"/>
+  <path d="M230 95 C230 95 250 125 300 125 C350 125 370 95 370 95" stroke="#B8A88C" stroke-width="3" fill="none"/>
+  <path d="M120 130 L80 175 L135 205" fill="#C9B896" stroke="#B8A88C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M480 130 L520 175 L465 205" fill="#C9B896" stroke="#B8A88C" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="205" y="210" width="190" height="145" rx="10" fill="#E8DCC8" stroke="#1B4332" stroke-width="2.5" stroke-dasharray="10 6"/>
+  <text x="300" y="268" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#1B4332">Sua ideia</text>
+  <text x="300" y="310" text-anchor="middle" font-family="Georgia, serif" font-size="28" font-weight="700" fill="#1B4332">aqui</text>
+  <text x="300" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" fill="#9A7B1A" letter-spacing="2">RAÍZES ESTAMPAS</text>
+</svg>
