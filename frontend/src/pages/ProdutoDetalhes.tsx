@@ -8,6 +8,7 @@ import { useCarrinho } from '../context/CarrinhoContext';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
 import { irParaLogin } from '../utils/authRedirect';
+import { PAGAMENTO } from '../config/loja';
 import { Icon } from '../components/Icon';
 import ProductImageCarousel from '../components/ProductImageCarousel';
 import OptionSelector from '../components/OptionSelector';
@@ -94,8 +95,10 @@ const ProdutoDetalhes = () => {
 
   const carouselKey = `${produto?.id ?? 'prod'}-${corSelecionada || 'default'}-${imagensExibidas.length}`;
 
+  const compraSemLogin = PAGAMENTO.modo === 'pix-manual';
+
   const handleAdicionarAoCarrinho = () => {
-    if (!estaAutenticado) {
+    if (!compraSemLogin && !estaAutenticado) {
       showToast('Faça login para adicionar produtos ao carrinho', 'info');
       irParaLogin(navigate, `/produto/${id}`);
       return;
@@ -240,7 +243,11 @@ const ProdutoDetalhes = () => {
                     disabled={produto.estoque === 0}
                   >
                     <Icon icon={FiShoppingCart} className="me-2" />
-                    {produto.estoque === 0 ? 'Sem estoque' : estaAutenticado ? 'Adicionar ao Carrinho' : 'Entrar e Comprar'}
+                    {produto.estoque === 0
+                      ? 'Sem estoque'
+                      : compraSemLogin || estaAutenticado
+                        ? 'Adicionar ao Carrinho'
+                        : 'Entrar e Comprar'}
                   </Button>
                   <Button variant="outline-primary" onClick={() => navigate('/carrinho')}>
                     Ver Carrinho
