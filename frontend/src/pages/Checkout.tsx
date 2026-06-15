@@ -8,10 +8,18 @@ import { showToast } from '../utils/toast';
 import { formatarCep, limparCep, buscarEnderecoPorCep } from '../utils/cep';
 import { TamanhoProduto, CorProduto } from '../types';
 import FormasPagamento, { MetodoPagamento, DadosCartao } from '../components/FormasPagamento';
+import PagamentoPixManual from '../components/PagamentoPixManual';
 import {
   criptografarCartao,
   inicializarPagBank,
 } from '../utils/pagseguro';
+import {
+  LOJA,
+  PAGAMENTO,
+  montarMensagemPedidoWhatsApp,
+} from '../config/loja';
+
+const usaPixManual = PAGAMENTO.modo === 'pix-manual';
 
 const Checkout = () => {
   const { itens, total, limparCarrinho } = useCarrinho();
@@ -46,8 +54,8 @@ const Checkout = () => {
   });
 
   const [publicKeyPagBank, setPublicKeyPagBank] = useState('');
-  const [preparandoPagamento, setPreparandoPagamento] = useState(true);
-  const [pagSeguroPronto, setPagSeguroPronto] = useState(false);
+  const [preparandoPagamento, setPreparandoPagamento] = useState(!usaPixManual);
+  const [pagSeguroPronto, setPagSeguroPronto] = useState(usaPixManual);
   const [cartaoDisponivel, setCartaoDisponivel] = useState(false);
   const [pagSeguroSandbox, setPagSeguroSandbox] = useState(false);
   const [erroPagamento, setErroPagamento] = useState<string | null>(null);
@@ -56,6 +64,10 @@ const Checkout = () => {
   const [qrCodeImagem, setQrCodeImagem] = useState<string | null>(null);
   const [codigoPix, setCodigoPix] = useState<string | null>(null);
   const [aguardandoPix, setAguardandoPix] = useState(false);
+
+  const [pedidoManualConfirmado, setPedidoManualConfirmado] = useState(false);
+  const [numeroPedidoManual, setNumeroPedidoManual] = useState('');
+  const [mensagemWhatsApp, setMensagemWhatsApp] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
@@ -76,6 +88,8 @@ const Checkout = () => {
   }, [usuario]);
 
   useEffect(() => {
+    if (usaPixManual) return undefined;
+
     const prepararPagSeguro = async () => {
       try {
         const response = await api.get('/pagamentos/config');
@@ -109,7 +123,7 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    if (!pedidoId || !aguardandoPix) return undefined;
+    if (usaPixManual || !pedidoId || !aguardandoPix) return undefined;
 
     const intervalo = window.setInterval(async () => {
       try {
@@ -167,6 +181,74 @@ const Checkout = () => {
     } else if (digitos.length === 8) {
       preencherEnderecoPorCep(digitos);
     }
+  };
+
+  const validarFormulario = (): boolean => {
+    if (!cliente.nome.trim() || !cliente.email.trim() || !cliente.telefoneCelular.trim()) {
+      showToast('Preencha nome, e-mail e telefone.', 'error');
+      return false;
+    }
+
+    if (!cliente.dataNascimento) {
+      showToast('A data de nascimento é obrigatória', 'error');
+      return false;
+    }
+
+    if (!endereco.cep || !endereco.logradouro || !endereco.numero || !endereco.bairro || !endereco.cidade || !endereco.estado) {
+      showToast('Preencha todos os campos do endereço', 'error');
+      return false;
+    }
+
+    if (!cliente.cpf?.trim()) {
+      showToast('Informe o CPF para concluir o pedido.', 'error');
+      return false;
+    }
+
+    return true;
+  };
+
+  const copiarChavePix = async () => {
+    await navigator.clipboard.writeText(PAGAMENTO.pix.chave);
+    showToast('Chave Pix copiada!', 'success');
+  };
+
+  const confirmarPedidoManual = () => {
+    const numeroPedido = `RS-${Date.now().toString(36).toUpperCase().slice(-8)}`;
+    const itensLinhas = itens
+      .map((item) => {
+        const tamanho = item.tamanho ? ` | Tam: ${TamanhoProduto[item.tamanho]}` : '';
+        const cor = item.cor ? ` | Cor: ${CorProduto[item.cor]}` : '';
+        const subtotal = (item.produto.preco * item.quantidade).toFixed(2).replace('.', ',');
+        return `- ${item.quantidade}x ${item.produto.nome}${tamanho}${cor} — R$ ${subtotal}`;
+      })
+      .join('\n');
+
+    const enderecoLinha = [
+      endereco.logradouro,
+      endereco.numero,
+      endereco.complemento,
+      endereco.bairro,
+      `${endereco.cidade}/${endereco.estado}`,
+      `CEP ${endereco.cep}`,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    const mensagem = montarMensagemPedidoWhatsApp({
+      numeroPedido,
+      nome: cliente.nome,
+      email: cliente.email,
+      telefone: cliente.telefoneCelular,
+      cpf: cliente.cpf.trim(),
+      enderecoLinha,
+      itensLinhas,
+      total,
+    });
+
+    setNumeroPedidoManual(numeroPedido);
+    setMensagemWhatsApp(mensagem);
+    setPedidoManualConfirmado(true);
+    showToast('Pedido registrado! Faça o Pix e envie o comprovante pelo WhatsApp.', 'success');
   };
 
   const processarPagamento = async (idPedido: string) => {
@@ -231,6 +313,13 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (usaPixManual) {
+      if (pedidoManualConfirmado) return;
+      if (!validarFormulario()) return;
+      confirmarPedidoManual();
+      return;
+    }
+
     if (aguardandoPix) return;
 
     setLoading(true);
@@ -244,20 +333,7 @@ const Checkout = () => {
         return;
       }
 
-      if (!cliente.dataNascimento) {
-        showToast('A data de nascimento é obrigatória', 'error');
-        return;
-      }
-
-      if (!endereco.cep || !endereco.logradouro || !endereco.numero || !endereco.bairro || !endereco.cidade || !endereco.estado) {
-        showToast('Preencha todos os campos do endereço', 'error');
-        return;
-      }
-
-      if (!cliente.cpf?.trim()) {
-        showToast('Informe o CPF para concluir o pagamento.', 'error');
-        return;
-      }
+      if (!validarFormulario()) return;
 
       const itensValidos = itens.filter((item) => !item.produto.id.startsWith('demo-'));
       if (itensValidos.length === 0) {
@@ -315,7 +391,15 @@ const Checkout = () => {
     showToast('Código Pix copiado!', 'success');
   };
 
-  if (itens.length === 0 && !aguardandoPix) {
+  const concluirPedidoManual = () => {
+    limparCarrinho();
+    navigate('/');
+    showToast('Obrigada! Entraremos em contato após confirmar o pagamento.', 'success');
+  };
+
+  const formularioBloqueado = pedidoManualConfirmado || aguardandoPix;
+
+  if (itens.length === 0 && !aguardandoPix && !pedidoManualConfirmado) {
     return (
       <Container className="my-5">
         <Card className="text-center py-5">
@@ -330,17 +414,29 @@ const Checkout = () => {
     );
   }
 
-  const textoBotao = aguardandoPix
-    ? 'Aguardando pagamento Pix...'
-    : loading
-      ? 'Processando...'
-      : metodoPagamento === 'pix'
-        ? 'Finalizar compra e gerar Pix'
-        : 'Finalizar compra e pagar';
+  const textoBotao = usaPixManual
+    ? pedidoManualConfirmado
+      ? 'Pedido confirmado'
+      : 'Confirmar pedido'
+    : aguardandoPix
+      ? 'Aguardando pagamento Pix...'
+      : loading
+        ? 'Processando...'
+        : metodoPagamento === 'pix'
+          ? 'Finalizar compra e gerar Pix'
+          : 'Finalizar compra e pagar';
 
   return (
     <Container className="my-5">
       <h1 className="mb-4">Finalizar Compra</h1>
+
+      {usaPixManual && pedidoManualConfirmado && numeroPedidoManual && (
+        <Alert variant="success" className="mb-4">
+          Pedido <strong>{numeroPedidoManual}</strong> registrado. Transfira{' '}
+          <strong>R$ {total.toFixed(2).replace('.', ',')}</strong> via Pix e envie o comprovante
+          pelo WhatsApp para {LOJA.nome} confirmar.
+        </Alert>
+      )}
 
       <Row>
         <Col lg={8}>
@@ -356,7 +452,7 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={cliente.nome}
                       onChange={(e) => setCliente({ ...cliente, nome: e.target.value })}
                     />
@@ -367,7 +463,7 @@ const Checkout = () => {
                     <Form.Control
                       type="email"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={cliente.email}
                       onChange={(e) => setCliente({ ...cliente, email: e.target.value })}
                     />
@@ -378,7 +474,7 @@ const Checkout = () => {
                     <Form.Control
                       type="tel"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={cliente.telefoneCelular}
                       onChange={(e) =>
                         setCliente({ ...cliente, telefoneCelular: e.target.value })
@@ -391,7 +487,7 @@ const Checkout = () => {
                     <Form.Control
                       type="date"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={cliente.dataNascimento}
                       onChange={(e) =>
                         setCliente({ ...cliente, dataNascimento: e.target.value })
@@ -404,7 +500,7 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={cliente.cpf}
                       onChange={(e) => setCliente({ ...cliente, cpf: e.target.value })}
                     />
@@ -423,7 +519,7 @@ const Checkout = () => {
                       inputMode="numeric"
                       placeholder="00000-000"
                       maxLength={9}
-                      disabled={aguardandoPix || buscandoCep}
+                      disabled={formularioBloqueado || buscandoCep}
                       value={endereco.cep}
                       onChange={(e) => handleCepChange(e.target.value)}
                       onBlur={() => preencherEnderecoPorCep(limparCep(endereco.cep))}
@@ -438,7 +534,7 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.logradouro}
                       onChange={(e) =>
                         setEndereco({ ...endereco, logradouro: e.target.value })
@@ -452,7 +548,7 @@ const Checkout = () => {
                       ref={numeroInputRef}
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.numero}
                       onChange={(e) =>
                         setEndereco({ ...endereco, numero: e.target.value })
@@ -464,7 +560,7 @@ const Checkout = () => {
                     <Form.Label>Complemento</Form.Label>
                     <Form.Control
                       type="text"
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.complemento}
                       onChange={(e) =>
                         setEndereco({ ...endereco, complemento: e.target.value })
@@ -477,7 +573,7 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.bairro}
                       onChange={(e) =>
                         setEndereco({ ...endereco, bairro: e.target.value })
@@ -490,7 +586,7 @@ const Checkout = () => {
                     <Form.Control
                       type="text"
                       required
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.cidade}
                       onChange={(e) =>
                         setEndereco({ ...endereco, cidade: e.target.value })
@@ -504,7 +600,7 @@ const Checkout = () => {
                       type="text"
                       required
                       maxLength={2}
-                      disabled={aguardandoPix}
+                      disabled={formularioBloqueado}
                       value={endereco.estado}
                       onChange={(e) =>
                         setEndereco({ ...endereco, estado: e.target.value.toUpperCase() })
@@ -514,32 +610,57 @@ const Checkout = () => {
 
                   <Col md={12}>
                     <hr />
-                    <FormasPagamento
-                      metodo={metodoPagamento}
-                      onMetodoChange={setMetodoPagamento}
-                      cartao={cartao}
-                      onCartaoChange={setCartao}
-                      total={total}
-                      pagSeguroPronto={pagSeguroPronto}
-                      preparandoPagamento={preparandoPagamento}
-                      qrCodeImagem={qrCodeImagem}
-                      codigoPix={codigoPix}
-                      sandbox={pagSeguroSandbox}
-                      onCopiarPix={copiarPix}
-                      erroPagamento={erroPagamento}
-                    />
+                    {usaPixManual ? (
+                      <PagamentoPixManual
+                        total={total}
+                        pedidoConfirmado={pedidoManualConfirmado}
+                        mensagemWhatsApp={mensagemWhatsApp}
+                        onCopiarChave={copiarChavePix}
+                      />
+                    ) : (
+                      <FormasPagamento
+                        metodo={metodoPagamento}
+                        onMetodoChange={setMetodoPagamento}
+                        cartao={cartao}
+                        onCartaoChange={setCartao}
+                        total={total}
+                        pagSeguroPronto={pagSeguroPronto}
+                        preparandoPagamento={preparandoPagamento}
+                        qrCodeImagem={qrCodeImagem}
+                        codigoPix={codigoPix}
+                        sandbox={pagSeguroSandbox}
+                        onCopiarPix={copiarPix}
+                        erroPagamento={erroPagamento}
+                      />
+                    )}
                   </Col>
 
                   <Col md={12} className="mt-4">
-                    <Button
-                      type="submit"
-                      variant="success"
-                      size="lg"
-                      className="w-100"
-                      disabled={loading || aguardandoPix || !pagSeguroPronto}
-                    >
-                      {textoBotao}
-                    </Button>
+                    {usaPixManual && pedidoManualConfirmado ? (
+                      <Button
+                        type="button"
+                        variant="outline-primary"
+                        size="lg"
+                        className="w-100"
+                        onClick={concluirPedidoManual}
+                      >
+                        Já enviei o comprovante — voltar à loja
+                      </Button>
+                    ) : (
+                      <Button
+                        type="submit"
+                        variant="success"
+                        size="lg"
+                        className="w-100"
+                        disabled={
+                          loading ||
+                          formularioBloqueado ||
+                          (!usaPixManual && !pagSeguroPronto)
+                        }
+                      >
+                        {textoBotao}
+                      </Button>
+                    )}
                   </Col>
                 </Row>
               </Form>
@@ -582,8 +703,17 @@ const Checkout = () => {
             </Card>
 
             <Alert variant="light" className="mt-3 small border">
-              Escolha <strong>Pix</strong> ou <strong>Cartão</strong> abaixo dos seus dados e clique em finalizar.
-              Tudo na mesma página, como nas lojas online.
+              {usaPixManual ? (
+                <>
+                  Pagamento somente via <strong>Pix</strong>. Após transferir, envie o{' '}
+                  <strong>comprovante</strong> pelo WhatsApp para confirmarmos seu pedido.
+                </>
+              ) : (
+                <>
+                  Escolha <strong>Pix</strong> ou <strong>Cartão</strong> abaixo dos seus dados e
+                  clique em finalizar. Tudo na mesma página, como nas lojas online.
+                </>
+              )}
             </Alert>
           </div>
         </Col>

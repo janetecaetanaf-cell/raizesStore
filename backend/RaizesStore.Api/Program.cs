@@ -110,11 +110,13 @@ builder.Services.AddHttpClient<RaizesStore.Api.Services.IPagSeguroService, Raize
         Console.WriteLine("Usando DATABASE_URL do ambiente");
         try
         {
-            // Converte DATABASE_URL (formato: postgresql://user:pass@host:port/db) para connection string
+            // Converte DATABASE_URL (postgresql://user:pass@host:port/db) para connection string Npgsql
             var uri = new Uri(databaseUrl);
             var dbName = uri.LocalPath.TrimStart('/');
-            var userInfo = uri.UserInfo.Split(':');
-            connectionString = $"Host={uri.Host};Port={uri.Port};Database={dbName};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+            var userInfo = uri.UserInfo.Split(':', 2);
+            var username = Uri.UnescapeDataString(userInfo[0]);
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty;
+            connectionString = $"Host={uri.Host};Port={uri.Port};Database={dbName};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
             Console.WriteLine($"Conectando ao banco: {uri.Host}:{uri.Port}/{dbName}");
         }
         catch (Exception ex)

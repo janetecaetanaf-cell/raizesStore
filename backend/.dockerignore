@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.md
+limpar-e-rebuild.ps1

@@ -5,6 +5,7 @@ import { useCarrinho } from '../context/CarrinhoContext';
 import { useAuth } from '../context/AuthContext';
 import { TamanhoProduto, CorProduto } from '../types';
 import { Icon } from '../components/Icon';
+import { PAGAMENTO } from '../config/loja';
 import { irParaLogin } from '../utils/authRedirect';
 import { showToast } from '../utils/toast';
 
@@ -14,7 +15,7 @@ const Carrinho = () => {
   const navigate = useNavigate();
 
   const finalizarCompra = () => {
-    if (!estaAutenticado) {
+    if (PAGAMENTO.modo !== 'pix-manual' && !estaAutenticado) {
       showToast('Faça login para continuar a compra', 'info');
       irParaLogin(navigate, '/checkout');
       return;
@@ -152,7 +153,9 @@ const Carrinho = () => {
                   className="w-100"
                   onClick={finalizarCompra}
                 >
-                  {estaAutenticado ? 'Finalizar Compra' : 'Entrar e Finalizar Compra'}
+                  {estaAutenticado || PAGAMENTO.modo === 'pix-manual'
+                    ? 'Finalizar Compra'
+                    : 'Entrar e Finalizar Compra'}
                 </Button>
               </Card.Body>
             </Card>
