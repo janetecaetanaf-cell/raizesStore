@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using RaizesStore.Domain.Entities;
@@ -84,10 +85,8 @@ public class RaizesStoreDbContext : DbContext
 
             var imagensProperty = entity.Property(e => e.Imagens)
                 .HasConversion(
-                    v => string.Join("|", v),
-                    v => v != null && !string.IsNullOrEmpty(v)
-                        ? v.Split("|", StringSplitOptions.RemoveEmptyEntries).ToList()
-                        : new List<string>())
+                    v => SerializarListaImagens(v),
+                    v => DesserializarListaImagens(v))
                 .HasColumnType("text");
             imagensProperty.Metadata.SetValueComparer(imagensComparer);
 
@@ -215,27 +214,63 @@ public class RaizesStoreDbContext : DbContext
         return base.SaveChangesAsync(cancellationToken);
     }
 
+    private static string SerializarListaImagens(List<string> value)
+    {
+        return JsonSerializer.Serialize(value ?? new List<string>());
+    }
+
+    private static List<string> DesserializarListaImagens(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return new List<string>();
+
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("[", StringComparison.Ordinal))
+        {
+            return JsonSerializer.Deserialize<List<string>>(trimmed) ?? new List<string>();
+        }
+
+        return trimmed.Split('|', StringSplitOptions.RemoveEmptyEntries).ToList();
+    }
+
     private static string SerializarImagensPorCor(Dictionary<CorProduto, string> value)
     {
-        return string.Join("|", value.Select(kv => $"{(int)kv.Key}:{kv.Value}"));
+        var dict = (value ?? new Dictionary<CorProduto, string>())
+            .ToDictionary(kv => ((int)kv.Key).ToString(), kv => kv.Value);
+        return JsonSerializer.Serialize(dict);
     }
 
     private static Dictionary<CorProduto, string> DesserializarImagensPorCor(string? value)
     {
-        if (string.IsNullOrEmpty(value))
+        if (string.IsNullOrWhiteSpace(value))
             return new Dictionary<CorProduto, string>();
 
-        var result = new Dictionary<CorProduto, string>();
-        foreach (var part in value.Split('|', StringSplitOptions.RemoveEmptyEntries))
+        var trimmed = value.Trim();
+
+        if (trimmed.StartsWith("{", StringComparison.Ordinal))
+        {
+            var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(trimmed)
+                ?? new Dictionary<string, string>();
+            var result = new Dictionary<CorProduto, string>();
+            foreach (var kv in dict)
+            {
+                if (int.TryParse(kv.Key, out var corInt) && !string.IsNullOrWhiteSpace(kv.Value))
+                    result[(CorProduto)corInt] = kv.Value;
+            }
+            return result;
+        }
+
+        var legado = new Dictionary<CorProduto, string>();
+        foreach (var part in trimmed.Split('|', StringSplitOptions.RemoveEmptyEntries))
         {
             var sep = part.IndexOf(':');
             if (sep <= 0) continue;
-            var cor = (CorProduto)int.Parse(part.Substring(0, sep));
+            if (!int.TryParse(part.Substring(0, sep), out var corInt)) continue;
             var url = part.Substring(sep + 1);
             if (!string.IsNullOrWhiteSpace(url))
-                result[cor] = url;
+                legado[(CorProduto)corInt] = url;
         }
 
-        return result;
+        return legado;
     }
 }
