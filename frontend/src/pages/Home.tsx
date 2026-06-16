@@ -142,7 +142,9 @@ const Home = () => {
               </button>
             </Col>
             <Col lg={5} className="d-none d-lg-block">
-              <div className="hero-symbol">✦ 🎨 ✦</div>
+              <div className="hero-symbol">
+                <img src="/images/logo-raizes.png" alt="Raízes Estampas" className="hero-logo" />
+              </div>
             </Col>
           </Row>
         </Container>

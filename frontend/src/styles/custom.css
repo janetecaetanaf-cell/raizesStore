@@ -231,10 +231,14 @@ body {
 
 .hero-symbol {
   text-align: center;
-  font-size: 4rem;
-  opacity: 0.3;
-  letter-spacing: 1rem;
   animation: pulse 4s ease-in-out infinite;
+}
+
+.hero-symbol .hero-logo {
+  width: 260px;
+  max-width: 100%;
+  opacity: 0.85;
+  filter: brightness(0) invert(1);
 }
 
 @keyframes pulse {
