@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Container, Row, Col, Nav } from "react-bootstrap";
+import { Container, Row, Col, Nav, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { Produto, Categoria } from "../types";
@@ -8,7 +8,6 @@ import { normalizarProduto } from "../utils/produto";
 import {
   getCategoriasRaiz,
   getSubcategorias,
-  getIdsSubcategorias,
   normalizarCategorias,
   selecionarDestaquesPorLinha,
 } from "../utils/categorias";
@@ -18,26 +17,27 @@ import TrustSection from "../components/TrustSection";
 const obterDataCriacao = (produto: Produto) =>
   produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
 
-const selecionarDestaques = (
+const selecionarDestaquesVariados = (
   lista: Produto[],
-  comFiltroCategoria: boolean,
   categorias: Categoria[],
 ): Produto[] => {
-  if (comFiltroCategoria) {
-    return [...lista]
-      .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))
-      .slice(0, 8);
+  const porLinha = selecionarDestaquesPorLinha(lista, categorias);
+  if (porLinha.length > 0) {
+    return porLinha;
   }
 
-  return selecionarDestaquesPorLinha(lista, categorias);
+  return [...lista]
+    .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))
+    .slice(0, 8);
 };
 
 const Home = () => {
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [catalogo, setCatalogo] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaPaiSelecionada, setCategoriaPaiSelecionada] = useState("");
   const [subcategoriaSelecionada, setSubcategoriaSelecionada] = useState("");
   const [usandoDemo, setUsandoDemo] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const navigate = useNavigate();
 
   const categoriasRaiz = useMemo(() => getCategoriasRaiz(categorias), [categorias]);
@@ -46,89 +46,66 @@ const Home = () => {
     [categorias, categoriaPaiSelecionada],
   );
 
-  const comFiltroCategoria = Boolean(categoriaPaiSelecionada || subcategoriaSelecionada);
+  const emVariados = !categoriaPaiSelecionada && !subcategoriaSelecionada;
 
-  const filtrarProdutosLocal = (
-    lista: Produto[],
-    cats: Categoria[],
-  ): Produto[] => {
-    if (subcategoriaSelecionada) {
-      return lista.filter((p) => p.categoriaId === subcategoriaSelecionada);
-    }
-    if (categoriaPaiSelecionada) {
-      const ids = new Set(getIdsSubcategorias(cats, categoriaPaiSelecionada));
-      ids.add(categoriaPaiSelecionada);
-      return lista.filter((p) => ids.has(p.categoriaId));
-    }
-    return lista;
-  };
+  const destaques = useMemo(
+    () => (emVariados ? selecionarDestaquesVariados(catalogo, categorias) : []),
+    [catalogo, categorias, emVariados],
+  );
+
+  const produtosSubcategoria = useMemo(() => {
+    if (!subcategoriaSelecionada) return [];
+    return catalogo.filter((p) => p.categoriaId === subcategoriaSelecionada);
+  }, [catalogo, subcategoriaSelecionada]);
+
+  const tituloCatalogo = useMemo(() => {
+    const sub = categorias.find((c) => c.id === subcategoriaSelecionada);
+    const pai = categorias.find((c) => c.id === categoriaPaiSelecionada);
+    if (sub && pai) return `${pai.nome} › ${sub.nome}`;
+    return sub?.nome ?? "";
+  }, [categorias, subcategoriaSelecionada, categoriaPaiSelecionada]);
 
   useEffect(() => {
     carregarLoja();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (usandoDemo) {
-      const filtrados = filtrarProdutosLocal(produtosDemo, categorias);
-      setProdutos(selecionarDestaques(filtrados, comFiltroCategoria, categorias));
-      return;
-    }
-
-    carregarProdutosApi();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoriaPaiSelecionada, subcategoriaSelecionada, usandoDemo]);
-
   const aplicarDemo = () => {
-    const cats = categoriasDemo;
-    setCategorias(cats);
-    const filtrados = filtrarProdutosLocal(produtosDemo, cats);
-    setProdutos(selecionarDestaques(filtrados, comFiltroCategoria, cats));
+    setCategorias(categoriasDemo);
+    setCatalogo(produtosDemo);
     setUsandoDemo(true);
   };
 
   const carregarLoja = async () => {
+    setCarregando(true);
     try {
       const [categoriasRes, produtosRes] = await Promise.all([
         api.get("/categorias"),
         api.get("/produtos"),
       ]);
 
-      if (categoriasRes.data?.length > 0 && produtosRes.data?.length > 0) {
-        const cats = normalizarCategorias(categoriasRes.data);
-        setCategorias(cats);
-        const lista = produtosRes.data.map((p: Record<string, unknown>) =>
-          normalizarProduto(p),
-        );
-        setProdutos(selecionarDestaques(lista, false, cats));
-        setUsandoDemo(false);
-        return;
-      }
-    } catch {
-      // cai no demo completo abaixo
-    }
-
-    setCategoriaPaiSelecionada("");
-    setSubcategoriaSelecionada("");
-    aplicarDemo();
-  };
-
-  const carregarProdutosApi = async () => {
-    try {
-      const params: Record<string, string> = {};
-      if (subcategoriaSelecionada) {
-        params.categoriaId = subcategoriaSelecionada;
-      } else if (categoriaPaiSelecionada) {
-        params.categoriaPaiId = categoriaPaiSelecionada;
-      }
-
-      const response = await api.get("/produtos", { params });
-      const lista = (response.data ?? []).map((p: Record<string, unknown>) =>
+      const cats = normalizarCategorias(categoriasRes.data ?? []);
+      const lista = (produtosRes.data ?? []).map((p: Record<string, unknown>) =>
         normalizarProduto(p),
       );
-      setProdutos(selecionarDestaques(lista, comFiltroCategoria, categorias));
-    } catch {
+
+      if (cats.length > 0) {
+        setCategorias(cats);
+        setCatalogo(lista);
+        setUsandoDemo(false);
+        setCategoriaPaiSelecionada("");
+        setSubcategoriaSelecionada("");
+        return;
+      }
+
+      setCategoriaPaiSelecionada("");
+      setSubcategoriaSelecionada("");
       aplicarDemo();
+    } catch {
+      setCategoriaPaiSelecionada("");
+      setSubcategoriaSelecionada("");
+      aplicarDemo();
+    } finally {
+      setCarregando(false);
     }
   };
 
@@ -198,7 +175,7 @@ const Home = () => {
             ))}
           </Nav>
 
-          {subcategorias.length > 0 && (
+          {categoriaPaiSelecionada && subcategorias.length > 0 && (
             <Nav className="category-pills category-pills-sub justify-content-center flex-wrap">
               {subcategorias.map((sub) => (
                 <Nav.Link
@@ -212,40 +189,83 @@ const Home = () => {
               ))}
             </Nav>
           )}
+          {categoriaPaiSelecionada && !subcategoriaSelecionada && subcategorias.length > 0 && (
+            <p className="text-center text-white-50 small mt-3 mb-0">
+              Escolha Camisetas, Canecas ou outra opção para ver os produtos.
+            </p>
+          )}
         </Container>
       </section>
 
-      <section id="destaques" className="destaques-section">
-        <Container>
-          <h2 className="section-title text-center">Destaques</h2>
-          {usandoDemo && (
-            <p className="text-center demo-notice">
-              Catálogo de demonstração — cadastre produtos no painel admin para
-              substituir estes itens.
-            </p>
-          )}
-          {produtos.length === 0 ? (
-            <div className="text-center py-5">
-              <p className="text-muted fs-5">
-                Nenhum produto encontrado nesta categoria
+      {emVariados && (
+        <section id="destaques" className="destaques-section">
+          <Container>
+            <h2 className="section-title text-center">Destaques</h2>
+            {usandoDemo && (
+              <p className="text-center demo-notice">
+                Catálogo de demonstração — cadastre produtos no painel admin para
+                substituir estes itens.
               </p>
-            </div>
-          ) : (
-            <Row className="g-4">
-              {produtos.map((produto) => (
-                <Col key={produto.id} xs={6} md={4} lg={3}>
-                  <ProductCard
-                    produto={produto}
-                    onComprar={(p) =>
-                      !p.id.startsWith("demo-") && navigate(`/produto/${p.id}`)
-                    }
-                  />
-                </Col>
-              ))}
-            </Row>
-          )}
-        </Container>
-      </section>
+            )}
+            {carregando ? (
+              <div className="text-center py-5">
+                <Spinner animation="border" variant="success" role="status">
+                  <span className="visually-hidden">Carregando produtos...</span>
+                </Spinner>
+              </div>
+            ) : destaques.length === 0 ? (
+              <div className="text-center py-5">
+                <p className="text-muted fs-5">Nenhum produto em destaque no momento</p>
+              </div>
+            ) : (
+              <Row className="g-4">
+                {destaques.map((produto) => (
+                  <Col key={produto.id} xs={6} md={4} lg={3}>
+                    <ProductCard
+                      produto={produto}
+                      onComprar={(p) =>
+                        !p.id.startsWith("demo-") && navigate(`/produto/${p.id}`)
+                      }
+                    />
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </Container>
+        </section>
+      )}
+
+      {subcategoriaSelecionada && (
+        <section className="destaques-section">
+          <Container>
+            <h2 className="section-title text-center">{tituloCatalogo}</h2>
+            {carregando ? (
+              <div className="text-center py-5">
+                <Spinner animation="border" variant="success" role="status">
+                  <span className="visually-hidden">Carregando produtos...</span>
+                </Spinner>
+              </div>
+            ) : produtosSubcategoria.length === 0 ? (
+              <div className="text-center py-5">
+                <p className="text-muted fs-5">Nenhum produto encontrado nesta categoria</p>
+              </div>
+            ) : (
+              <Row className="g-4">
+                {produtosSubcategoria.map((produto) => (
+                  <Col key={produto.id} xs={6} md={4} lg={3}>
+                    <ProductCard
+                      produto={produto}
+                      onComprar={(p) =>
+                        !p.id.startsWith("demo-") && navigate(`/produto/${p.id}`)
+                      }
+                    />
+                  </Col>
+                ))}
+              </Row>
+            )}
+          </Container>
+        </section>
+      )}
 
       <section className="info-banner">
         <Container>

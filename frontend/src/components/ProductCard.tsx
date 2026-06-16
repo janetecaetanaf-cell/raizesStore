@@ -38,6 +38,8 @@ const ProductCard = ({ produto, onComprar }: ProductCardProps) => {
             src={produto.imagens[0]}
             alt={produto.nome}
             className="product-image"
+            loading="lazy"
+            decoding="async"
             onClick={handleClick}
             style={{ cursor: produto.id.startsWith('demo-') ? 'default' : 'pointer' }}
           />
