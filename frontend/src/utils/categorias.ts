@@ -1,4 +1,4 @@
-import { Categoria } from '../types';
+import { Categoria, TipoProduto } from '../types';
 import type { Produto } from '../types';
 
 export const normalizarCategoria = (data: Record<string, unknown>): Categoria => {
@@ -53,23 +53,40 @@ export const getIdsSubcategorias = (categorias: Categoria[], categoriaPaiId: str
 const obterDataCriacao = (produto: Produto) =>
   produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
 
-/** Um produto mais recente por categoria principal (aba Variados). */
+/** Um produto mais recente por tipo (camiseta e caneca) em cada categoria principal (aba Variados). */
 export const selecionarDestaquesPorLinha = (
   produtos: Produto[],
   categorias: Categoria[],
 ): Produto[] => {
   const selecionados: Produto[] = [];
+  const idsUsados = new Set<string>();
+
+  const adicionar = (produto?: Produto) => {
+    if (produto && !idsUsados.has(produto.id)) {
+      selecionados.push(produto);
+      idsUsados.add(produto.id);
+    }
+  };
+
+  const maisRecentePorTipo = (lista: Produto[], tipo: TipoProduto): Produto | undefined =>
+    [...lista]
+      .filter((p) => p.tipoProduto === tipo)
+      .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))[0];
 
   for (const pai of getCategoriasRaiz(categorias)) {
     const idsCategoria = new Set(getIdsSubcategorias(categorias, pai.id));
     idsCategoria.add(pai.id);
 
-    const maisRecente = produtos
-      .filter((p) => idsCategoria.has(p.categoriaId))
-      .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))[0];
+    const naLinha = produtos.filter((p) => idsCategoria.has(p.categoriaId));
+    const antes = selecionados.length;
 
-    if (maisRecente) {
-      selecionados.push(maisRecente);
+    adicionar(maisRecentePorTipo(naLinha, TipoProduto.Camiseta));
+    adicionar(maisRecentePorTipo(naLinha, TipoProduto.Caneca));
+
+    if (selecionados.length === antes) {
+      adicionar(
+        [...naLinha].sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))[0],
+      );
     }
   }
 
