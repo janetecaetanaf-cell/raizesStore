@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Container, Card, Tab, Tabs, Table, Button, Form, Modal, Alert, Badge } from 'react-bootstrap';
 import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import api from '../../services/api';
@@ -49,6 +49,7 @@ const AdminProdutos = () => {
   const [novaImagem, setNovaImagem] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'danger'; message: string } | null>(null);
+  const arquivosUploadRef = useRef<Map<string, File>>(new Map());
 
   useEffect(() => {
     carregarDados();
@@ -85,6 +86,44 @@ const AdminProdutos = () => {
       return subcategorias[0].id;
     }
     return categorias.find((c) => c.ativo && !c.categoriaPaiId)?.id ?? '';
+  };
+
+  const liberarBlobUrls = (urls: string[]) => {
+    urls.forEach((url) => {
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+        arquivosUploadRef.current.delete(url);
+      }
+    });
+  };
+
+  const rotuloImagemCadastro = (img: string, index?: number) => {
+    if (img.startsWith('blob:')) {
+      return index != null ? `Imagem ${index + 1} (arquivo local)` : 'Arquivo local';
+    }
+    if (img.startsWith('data:')) {
+      return index != null ? `Imagem ${index + 1} (upload)` : 'Imagem enviada (upload)';
+    }
+    if (img.length > 48) return `${img.slice(0, 48)}…`;
+    return img;
+  };
+
+  const converterImagemParaSalvar = (img: string): Promise<string> => {
+    if (!img.startsWith('blob:')) {
+      return Promise.resolve(img);
+    }
+
+    const file = arquivosUploadRef.current.get(img);
+    if (!file) {
+      return Promise.resolve(img);
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Erro ao ler a imagem'));
+      reader.readAsDataURL(file);
+    });
   };
 
   // ========== CATEGORIAS ==========
@@ -169,6 +208,7 @@ const AdminProdutos = () => {
 
   // ========== PRODUTOS ==========
   const abrirModalProduto = (produto?: Produto) => {
+    liberarBlobUrls(produtoForm.imagens);
     if (produto) {
       setProdutoEditando(produto);
       setProdutoForm({
@@ -210,13 +250,15 @@ const AdminProdutos = () => {
         return;
       }
 
-      const imagensParaSalvar = novaImagem.trim()
+      const imagensBase = novaImagem.trim()
         ? [...produtoForm.imagens, novaImagem.trim()]
         : [...produtoForm.imagens];
 
       if (novaImagem.trim()) {
         setNovaImagem('');
       }
+
+      const imagensParaSalvar = await Promise.all(imagensBase.map(converterImagemParaSalvar));
 
       // Validar campos obrigatórios
       if (!produtoForm.nome.trim()) {
@@ -287,6 +329,7 @@ const AdminProdutos = () => {
         console.log('Produto criado:', response.data);
         mostrarAlert('success', 'Produto cadastrado com sucesso!');
       }
+      liberarBlobUrls(produtoForm.imagens);
       setShowProdutoModal(false);
       await carregarDados();
     } catch (error: any) {
@@ -394,22 +437,14 @@ const AdminProdutos = () => {
 
     setUploadingImage(true);
     try {
-      // Converter para base64 e usar como data URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setProdutoForm((prev) => ({
-          ...prev,
-          imagens: [...prev.imagens, base64String],
-        }));
-        setUploadingImage(false);
-        mostrarAlert('success', 'Imagem adicionada com sucesso!');
-      };
-      reader.onerror = () => {
-        mostrarAlert('danger', 'Erro ao ler a imagem');
-        setUploadingImage(false);
-      };
-      reader.readAsDataURL(file);
+      const objectUrl = URL.createObjectURL(file);
+      arquivosUploadRef.current.set(objectUrl, file);
+      setProdutoForm((prev) => ({
+        ...prev,
+        imagens: [...prev.imagens, objectUrl],
+      }));
+      setUploadingImage(false);
+      mostrarAlert('success', 'Imagem adicionada com sucesso!');
     } catch (error: any) {
       mostrarAlert('danger', `Erro ao fazer upload: ${error.message}`);
       setUploadingImage(false);
@@ -420,10 +455,16 @@ const AdminProdutos = () => {
   };
 
   const removerImagem = (index: number) => {
-    setProdutoForm((prev) => ({
-      ...prev,
-      imagens: prev.imagens.filter((_, i) => i !== index),
-    }));
+    setProdutoForm((prev) => {
+      const removida = prev.imagens[index];
+      if (removida) {
+        liberarBlobUrls([removida]);
+      }
+      return {
+        ...prev,
+        imagens: prev.imagens.filter((_, i) => i !== index),
+      };
+    });
   };
 
   const atualizarProdutoForm = <K extends keyof typeof produtoForm>(
@@ -730,7 +771,10 @@ const AdminProdutos = () => {
       </Modal>
 
       {/* Modal Produto */}
-      <Modal show={showProdutoModal} onHide={() => setShowProdutoModal(false)} size="lg">
+      <Modal show={showProdutoModal} onHide={() => {
+        liberarBlobUrls(produtoForm.imagens);
+        setShowProdutoModal(false);
+      }} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
             {produtoEditando ? 'Editar Produto' : 'Novo Produto'}
@@ -891,8 +935,11 @@ const AdminProdutos = () => {
               
               {/* Upload de arquivo */}
               <div className="mb-3">
-                <Form.Label className="fw-bold">📤 Fazer Upload de Imagem</Form.Label>
+                <Form.Label htmlFor="produto-imagem-upload" className="fw-bold">
+                  📤 Fazer Upload de Imagem
+                </Form.Label>
                 <Form.Control
+                  id="produto-imagem-upload"
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
@@ -932,15 +979,17 @@ const AdminProdutos = () => {
                 <div className="mt-2">
                   {produtoForm.imagens.map((img, index) => (
                     <div key={index} className="d-flex align-items-center gap-2 mb-2 p-2 border rounded">
-                      <img 
-                        src={img} 
-                        alt={`Imagem ${index + 1}`} 
+                      <img
+                        src={img}
+                        alt={`Imagem ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="60" height="60"%3E%3Crect width="60" height="60" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3EImagem não encontrada%3C/text%3E%3C/svg%3E';
                         }}
                       />
-                      <span className="flex-grow-1 text-truncate small">{img}</span>
+                      <span className="flex-grow-1 text-truncate small">{rotuloImagemCadastro(img, index + 1)}</span>
                       <Button variant="outline-danger" size="sm" onClick={() => removerImagem(index)}>
                         <Icon icon={FiTrash2} />
                       </Button>
@@ -969,8 +1018,7 @@ const AdminProdutos = () => {
                       <option value="">Automático (padrão)</option>
                       {produtoForm.imagens.map((img, index) => (
                         <option key={index} value={img}>
-                          Imagem {index + 1}
-                          {img.length > 60 ? ` — ${img.slice(0, 60)}…` : ` — ${img}`}
+                          {rotuloImagemCadastro(img, index + 1)}
                         </option>
                       ))}
                     </Form.Select>
@@ -995,7 +1043,10 @@ const AdminProdutos = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowProdutoModal(false)}>
+          <Button variant="secondary" onClick={() => {
+            liberarBlobUrls(produtoForm.imagens);
+            setShowProdutoModal(false);
+          }}>
             <Icon icon={FiX} className="me-2" />
             Cancelar
           </Button>
