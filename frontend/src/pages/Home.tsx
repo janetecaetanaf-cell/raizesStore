@@ -65,49 +65,55 @@ const Home = () => {
     return sub?.nome ?? "";
   }, [categorias, subcategoriaSelecionada, categoriaPaiSelecionada]);
 
+  const aguardandoCatalogo = carregando && catalogo.length === 0;
+
   useEffect(() => {
-    carregarLoja();
-  }, []);
+    let ativo = true;
 
-  const aplicarDemo = () => {
-    setCategorias(categoriasDemo);
-    setCatalogo(produtosDemo);
-    setUsandoDemo(true);
-  };
+    const carregarLoja = async () => {
+      setCarregando(true);
+      try {
+        const [categoriasRes, produtosRes] = await Promise.all([
+          api.get("/categorias"),
+          api.get("/produtos"),
+        ]);
 
-  const carregarLoja = async () => {
-    setCarregando(true);
-    try {
-      const [categoriasRes, produtosRes] = await Promise.all([
-        api.get("/categorias"),
-        api.get("/produtos"),
-      ]);
+        if (!ativo) return;
 
-      const cats = normalizarCategorias(categoriasRes.data ?? []);
-      const lista = (produtosRes.data ?? []).map((p: Record<string, unknown>) =>
-        normalizarProduto(p),
-      );
+        const cats = normalizarCategorias(categoriasRes.data ?? []);
+        const lista = (produtosRes.data ?? []).map((p: Record<string, unknown>) =>
+          normalizarProduto(p),
+        );
 
-      if (cats.length > 0) {
-        setCategorias(cats);
-        setCatalogo(lista);
-        setUsandoDemo(false);
+        if (cats.length > 0) {
+          setCategorias(cats);
+          setCatalogo(lista);
+          setUsandoDemo(false);
+        } else {
+          setCategorias(categoriasDemo);
+          setCatalogo(produtosDemo);
+          setUsandoDemo(true);
+        }
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
-        return;
+        setCarregando(false);
+      } catch {
+        if (!ativo) return;
+        setCategorias(categoriasDemo);
+        setCatalogo(produtosDemo);
+        setUsandoDemo(true);
+        setCategoriaPaiSelecionada("");
+        setSubcategoriaSelecionada("");
+        setCarregando(false);
       }
+    };
 
-      setCategoriaPaiSelecionada("");
-      setSubcategoriaSelecionada("");
-      aplicarDemo();
-    } catch {
-      setCategoriaPaiSelecionada("");
-      setSubcategoriaSelecionada("");
-      aplicarDemo();
-    } finally {
-      setCarregando(false);
-    }
-  };
+    carregarLoja();
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   const selecionarCategoriaRaiz = (id: string) => {
     setCategoriaPaiSelecionada(id);
@@ -207,7 +213,7 @@ const Home = () => {
                 substituir estes itens.
               </p>
             )}
-            {carregando ? (
+            {aguardandoCatalogo ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="success" role="status">
                   <span className="visually-hidden">Carregando produtos...</span>
@@ -239,7 +245,7 @@ const Home = () => {
         <section className="destaques-section">
           <Container>
             <h2 className="section-title text-center">{tituloCatalogo}</h2>
-            {carregando ? (
+            {aguardandoCatalogo ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="success" role="status">
                   <span className="visually-hidden">Carregando produtos...</span>
