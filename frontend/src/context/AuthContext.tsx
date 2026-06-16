@@ -10,14 +10,14 @@ interface Usuario {
 
 interface AuthContextType {
   usuario: Usuario | null;
-  login: (email: string, senha?: string) => Promise<void>;
+  login: (email: string, senha: string) => Promise<void>;
   cadastrar: (dados: {
     nome: string;
     email: string;
     telefoneCelular: string;
     dataNascimento: string;
     cpf?: string;
-    senha?: string;
+    senha: string;
   }) => Promise<void>;
   logout: () => void;
   estaAutenticado: boolean;
@@ -36,15 +36,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (email: string, _senha?: string) => {
+  const login = async (email: string, senha: string) => {
     const emailNormalizado = email.trim().toLowerCase();
     if (!emailNormalizado) {
       throw new Error('Informe o e-mail.');
     }
+    if (!senha?.trim()) {
+      throw new Error('Informe a senha.');
+    }
 
     try {
-      const response = await api.get('/clientes/por-email', {
-        params: { email: emailNormalizado },
+      const response = await api.post('/clientes/login', {
+        email: emailNormalizado,
+        senha,
       });
       const cliente = response.data;
 
@@ -57,9 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUsuario(usuarioData);
       localStorage.setItem('usuario', JSON.stringify(usuarioData));
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        throw new Error('E-mail não cadastrado. Use a aba Cadastre-se para criar sua conta.');
-      }
       const msgApi =
         error.response?.data?.message ??
         error.response?.data ??
@@ -78,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     telefoneCelular: string;
     dataNascimento: string;
     cpf?: string;
-    senha?: string;
+    senha: string;
   }) => {
     try {
       // Converter data para ISO string e garantir que CPF seja null se vazio
@@ -90,10 +91,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const response = await api.post('/clientes', {
         nome: dados.nome.trim(),
-        email: dados.email.trim(),
+        email: dados.email.trim().toLowerCase(),
         telefoneCelular: dados.telefoneCelular.trim(),
         dataNascimento: dataNascimento,
         cpf: cpf,
+        senha: dados.senha,
       });
 
       const cliente = response.data;

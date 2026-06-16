@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaizesStore.Api.Services;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
 
@@ -24,6 +25,32 @@ public class ClientesController : ControllerBase
             .Where(c => c.DeletedAt == null)
             .OrderBy(c => c.Nome)
             .ToListAsync();
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<Cliente>> Login(LoginClienteDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Email))
+        {
+            return BadRequest("O e-mail é obrigatório");
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Senha))
+        {
+            return BadRequest("A senha é obrigatória");
+        }
+
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var cliente = await _context.Clientes
+            .Include(c => c.Enderecos.Where(e => e.DeletedAt == null))
+            .FirstOrDefaultAsync(c => c.Email.ToLower() == email && c.DeletedAt == null);
+
+        if (cliente == null || !SenhaClienteService.Verificar(dto.Senha, cliente.SenhaHash))
+        {
+            return Unauthorized(new { message = "E-mail ou senha incorretos." });
+        }
+
+        return cliente;
     }
 
     [HttpGet("por-email")]
@@ -81,10 +108,27 @@ public class ClientesController : ControllerBase
         {
             return BadRequest("A data de nascimento é obrigatória");
         }
+        if (string.IsNullOrWhiteSpace(dto.Senha))
+        {
+            return BadRequest("A senha é obrigatória");
+        }
+        if (dto.Senha.Length < 6)
+        {
+            return BadRequest("A senha deve ter pelo menos 6 caracteres");
+        }
+
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var emailEmUso = await _context.Clientes
+            .AnyAsync(c => c.Email.ToLower() == email && c.DeletedAt == null);
+        if (emailEmUso)
+        {
+            return BadRequest("Este e-mail já está cadastrado. Faça login.");
+        }
 
         var cpf = string.IsNullOrWhiteSpace(dto.Cpf) ? null : dto.Cpf.Trim();
 
-        var cliente = new Cliente(dto.Nome.Trim(), dto.Email.Trim(), dto.TelefoneCelular.Trim(), dto.DataNascimento, cpf);
+        var cliente = new Cliente(dto.Nome.Trim(), email, dto.TelefoneCelular.Trim(), dto.DataNascimento, cpf);
+        cliente.DefinirSenha(SenhaClienteService.GerarHash(dto.Senha));
 
         if (dto.Endereco != null)
         {
@@ -209,7 +253,14 @@ public class CreateClienteDto
     public string TelefoneCelular { get; set; } = string.Empty;
     public DateTime DataNascimento { get; set; }
     public string? Cpf { get; set; }
+    public string Senha { get; set; } = string.Empty;
     public EnderecoDto? Endereco { get; set; }
+}
+
+public class LoginClienteDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Senha { get; set; } = string.Empty;
 }
 
 public class UpdateClienteDto

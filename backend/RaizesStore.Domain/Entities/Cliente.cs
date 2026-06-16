@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using RaizesStore.Domain.Entities;
 
 namespace RaizesStore.Domain.Entities;
@@ -21,7 +22,17 @@ public class Cliente : Entity
     public string TelefoneCelular { get; protected set; } = string.Empty;
     public DateTime DataNascimento { get; protected set; }
     public string? Cpf { get; protected set; }
+
+    [JsonIgnore]
+    public string? SenhaHash { get; protected set; }
+
     public List<EnderecoCliente> Enderecos { get; protected set; } = new();
+
+    public void DefinirSenha(string senhaHash)
+    {
+        SenhaHash = senhaHash;
+        SetUpdateAt();
+    }
 
     public void Atualizar(string nome, string email, string telefoneCelular, DateTime dataNascimento, string? cpf = null)
     {

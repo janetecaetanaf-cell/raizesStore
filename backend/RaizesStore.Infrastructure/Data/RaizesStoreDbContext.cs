@@ -120,6 +120,7 @@ public class RaizesStoreDbContext : DbContext
             entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
             entity.Property(e => e.TelefoneCelular).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Cpf).HasMaxLength(14);
+            entity.Property(e => e.SenhaHash).HasMaxLength(500);
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.Cpf);
         });

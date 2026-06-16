@@ -4,26 +4,23 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
 import { obterRedirectSeguro } from '../utils/authRedirect';
-import { PAGAMENTO } from '../config/loja';
 
 const Login = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'cadastro'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'cadastro'>('cadastro');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, cadastrar } = useAuth();
   const redirect = obterRedirectSeguro(searchParams.get('redirect'));
   const mensagemCompra = redirect === '/checkout'
-    ? 'Entre na sua conta para finalizar a compra.'
+    ? 'Crie sua conta ou entre para finalizar a compra.'
     : redirect.startsWith('/produto/')
-      ? 'Entre na sua conta para comprar este produto.'
+      ? 'Crie sua conta ou entre para comprar este produto.'
       : null;
 
-  // Login
   const [emailLogin, setEmailLogin] = useState('');
   const [senhaLogin, setSenhaLogin] = useState('');
 
-  // Cadastro
   const [dadosCadastro, setDadosCadastro] = useState({
     nome: '',
     email: '',
@@ -52,12 +49,17 @@ const Login = () => {
   const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (dadosCadastro.senha && dadosCadastro.senha !== dadosCadastro.confirmarSenha) {
+    if (!dadosCadastro.senha.trim()) {
+      showToast('Informe uma senha', 'error');
+      return;
+    }
+
+    if (dadosCadastro.senha !== dadosCadastro.confirmarSenha) {
       showToast('As senhas não coincidem', 'error');
       return;
     }
 
-    if (dadosCadastro.senha && dadosCadastro.senha.length < 6) {
+    if (dadosCadastro.senha.length < 6) {
       showToast('A senha deve ter pelo menos 6 caracteres', 'error');
       return;
     }
@@ -86,14 +88,11 @@ const Login = () => {
     <Container className="my-5">
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
-          {PAGAMENTO.modo === 'pix-manual' && (
-            <Alert variant="success" className="mb-3">
-              Para comprar com Pix, você <strong>não precisa de conta</strong>. Adicione ao carrinho e
-              finalize a compra direto.
-            </Alert>
-          )}
+          <Alert variant="info" className="mb-3">
+            Para comprar na loja, é necessário <strong>criar uma conta</strong> com e-mail e senha.
+          </Alert>
           {mensagemCompra && (
-            <Alert variant="info" className="mb-3">
+            <Alert variant="primary" className="mb-3">
               {mensagemCompra}
             </Alert>
           )}
@@ -104,45 +103,6 @@ const Login = () => {
                 onSelect={(k) => setActiveTab(k as 'login' | 'cadastro')}
                 className="mb-0"
               >
-                <Tab eventKey="login" title="Login">
-                  <div className="mt-3">
-                    <Form onSubmit={handleLogin}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>Email *</Form.Label>
-                        <Form.Control
-                          type="email"
-                          required
-                          value={emailLogin}
-                          onChange={(e) => setEmailLogin(e.target.value)}
-                          placeholder="seu@email.com"
-                        />
-                      </Form.Group>
-
-                      <Form.Group className="mb-3">
-                        <Form.Label>Senha</Form.Label>
-                        <Form.Control
-                          type="password"
-                          value={senhaLogin}
-                          onChange={(e) => setSenhaLogin(e.target.value)}
-                          placeholder="Opcional (para futuras implementações)"
-                        />
-                        <Form.Text className="text-muted">
-                          Primeira vez? Use a aba <strong>Cadastre-se</strong>. A senha ainda não é verificada.
-                        </Form.Text>
-                      </Form.Group>
-
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="w-100"
-                        disabled={loading}
-                      >
-                        {loading ? 'Entrando...' : 'Entrar'}
-                      </Button>
-                    </Form>
-                  </div>
-                </Tab>
-
                 <Tab eventKey="cadastro" title="Cadastre-se">
                   <div className="mt-3">
                     <Form onSubmit={handleCadastro}>
@@ -217,25 +177,26 @@ const Login = () => {
                       </Row>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Senha</Form.Label>
+                        <Form.Label>Senha *</Form.Label>
                         <Form.Control
                           type="password"
+                          required
                           value={dadosCadastro.senha}
                           onChange={(e) =>
                             setDadosCadastro({ ...dadosCadastro, senha: e.target.value })
                           }
                           minLength={6}
-                          placeholder="Opcional por enquanto"
                         />
                         <Form.Text className="text-muted">
-                          Opcional — mínimo de 6 caracteres se preencher
+                          Mínimo de 6 caracteres
                         </Form.Text>
                       </Form.Group>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Confirmar senha</Form.Label>
+                        <Form.Label>Confirmar Senha *</Form.Label>
                         <Form.Control
                           type="password"
+                          required
                           value={dadosCadastro.confirmarSenha}
                           onChange={(e) =>
                             setDadosCadastro({
@@ -243,7 +204,7 @@ const Login = () => {
                               confirmarSenha: e.target.value,
                             })
                           }
-                          placeholder="Repita a senha, se informou uma"
+                          minLength={6}
                         />
                       </Form.Group>
 
@@ -253,7 +214,44 @@ const Login = () => {
                         className="w-100"
                         disabled={loading}
                       >
-                        {loading ? 'Cadastrando...' : 'Cadastrar'}
+                        {loading ? 'Cadastrando...' : 'Criar conta'}
+                      </Button>
+                    </Form>
+                  </div>
+                </Tab>
+
+                <Tab eventKey="login" title="Login">
+                  <div className="mt-3">
+                    <Form onSubmit={handleLogin}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Email *</Form.Label>
+                        <Form.Control
+                          type="email"
+                          required
+                          value={emailLogin}
+                          onChange={(e) => setEmailLogin(e.target.value)}
+                          placeholder="seu@email.com"
+                        />
+                      </Form.Group>
+
+                      <Form.Group className="mb-3">
+                        <Form.Label>Senha *</Form.Label>
+                        <Form.Control
+                          type="password"
+                          required
+                          value={senhaLogin}
+                          onChange={(e) => setSenhaLogin(e.target.value)}
+                          minLength={6}
+                        />
+                      </Form.Group>
+
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        className="w-100"
+                        disabled={loading}
+                      >
+                        {loading ? 'Entrando...' : 'Entrar'}
                       </Button>
                     </Form>
                   </div>
