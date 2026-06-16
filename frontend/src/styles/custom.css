@@ -74,6 +74,13 @@ body {
   color: var(--text-dark) !important;
 }
 
+.store-brand .brand-logo {
+  height: 44px;
+  width: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .store-brand .brand-icon {
   font-size: 1.8rem;
   color: var(--gold);

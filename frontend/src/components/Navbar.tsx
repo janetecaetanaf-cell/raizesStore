@@ -25,7 +25,11 @@ const Navbar = () => {
       <BootstrapNavbar expand="lg" className="store-navbar sticky-top">
         <Container>
           <BootstrapNavbar.Brand as={Link} to="/" className="store-brand">
-            <span className="brand-icon">✦</span>
+            <img
+              src="/images/logo-raizes.png"
+              alt="Raízes Estampas"
+              className="brand-logo"
+            />
             <span className="brand-text">
               <strong>Raízes</strong>
               <small>Estampas</small>
