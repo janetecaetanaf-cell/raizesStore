@@ -41,7 +41,7 @@ const ProductImageCarousel = ({
       activeIndex={activeIndex}
       onSelect={setActiveIndex}
       interval={null}
-      indicators
+      indicators={false}
       controls
       className="product-carousel"
       variant="dark"

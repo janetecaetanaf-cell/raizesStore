@@ -9,35 +9,27 @@ import {
   getCategoriasRaiz,
   getSubcategorias,
   normalizarCategorias,
-  selecionarDestaquesPorLinha,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
 
+const LIMITE_DESTAQUES = 8;
+
 const obterDataCriacao = (produto: Produto) =>
   produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
 
-const selecionarDestaquesVariados = (
-  lista: Produto[],
-  categorias: Categoria[],
-): Produto[] => {
-  const porLinha = selecionarDestaquesPorLinha(lista, categorias);
-  if (porLinha.length > 0) {
-    return porLinha;
-  }
-
-  return [...lista]
-    .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))
-    .slice(0, 8);
-};
+const selecionarUltimosProdutos = (lista: Produto[], limite: number): Produto[] =>
+  [...lista].sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a)).slice(0, limite);
 
 const Home = () => {
-  const [catalogo, setCatalogo] = useState<Produto[]>([]);
+  const [destaques, setDestaques] = useState<Produto[]>([]);
+  const [produtosSubcategoria, setProdutosSubcategoria] = useState<Produto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaPaiSelecionada, setCategoriaPaiSelecionada] = useState("");
   const [subcategoriaSelecionada, setSubcategoriaSelecionada] = useState("");
   const [usandoDemo, setUsandoDemo] = useState(false);
-  const [carregando, setCarregando] = useState(true);
+  const [carregandoInicial, setCarregandoInicial] = useState(true);
+  const [carregandoCategoria, setCarregandoCategoria] = useState(false);
   const navigate = useNavigate();
 
   const categoriasRaiz = useMemo(() => getCategoriasRaiz(categorias), [categorias]);
@@ -48,16 +40,6 @@ const Home = () => {
 
   const emVariados = !categoriaPaiSelecionada && !subcategoriaSelecionada;
 
-  const destaques = useMemo(
-    () => (emVariados ? selecionarDestaquesVariados(catalogo, categorias) : []),
-    [catalogo, categorias, emVariados],
-  );
-
-  const produtosSubcategoria = useMemo(() => {
-    if (!subcategoriaSelecionada) return [];
-    return catalogo.filter((p) => p.categoriaId === subcategoriaSelecionada);
-  }, [catalogo, subcategoriaSelecionada]);
-
   const tituloCatalogo = useMemo(() => {
     const sub = categorias.find((c) => c.id === subcategoriaSelecionada);
     const pai = categorias.find((c) => c.id === categoriaPaiSelecionada);
@@ -65,55 +47,99 @@ const Home = () => {
     return sub?.nome ?? "";
   }, [categorias, subcategoriaSelecionada, categoriaPaiSelecionada]);
 
-  const aguardandoCatalogo = carregando && catalogo.length === 0;
-
   useEffect(() => {
     let ativo = true;
 
-    const carregarLoja = async () => {
-      setCarregando(true);
+    const carregarInicio = async () => {
+      setCarregandoInicial(true);
       try {
-        const [categoriasRes, produtosRes] = await Promise.all([
+        const [categoriasRes, destaquesRes] = await Promise.all([
           api.get("/categorias"),
-          api.get("/produtos"),
+          api.get("/produtos", { params: { limite: LIMITE_DESTAQUES, recentes: true } }),
         ]);
 
         if (!ativo) return;
 
         const cats = normalizarCategorias(categoriasRes.data ?? []);
-        const lista = (produtosRes.data ?? []).map((p: Record<string, unknown>) =>
+        const lista = (destaquesRes.data ?? []).map((p: Record<string, unknown>) =>
           normalizarProduto(p),
         );
 
         if (cats.length > 0) {
           setCategorias(cats);
-          setCatalogo(lista);
+          setDestaques(lista);
           setUsandoDemo(false);
         } else {
           setCategorias(categoriasDemo);
-          setCatalogo(produtosDemo);
+          setDestaques(selecionarUltimosProdutos(produtosDemo, LIMITE_DESTAQUES));
           setUsandoDemo(true);
         }
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
-        setCarregando(false);
+        setProdutosSubcategoria([]);
       } catch {
         if (!ativo) return;
         setCategorias(categoriasDemo);
-        setCatalogo(produtosDemo);
+        setDestaques(selecionarUltimosProdutos(produtosDemo, LIMITE_DESTAQUES));
         setUsandoDemo(true);
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
-        setCarregando(false);
+        setProdutosSubcategoria([]);
+      } finally {
+        if (ativo) {
+          setCarregandoInicial(false);
+        }
       }
     };
 
-    carregarLoja();
+    carregarInicio();
 
     return () => {
       ativo = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!subcategoriaSelecionada || usandoDemo) {
+      if (!subcategoriaSelecionada) {
+        setProdutosSubcategoria([]);
+      } else if (usandoDemo) {
+        setProdutosSubcategoria(
+          produtosDemo.filter((p) => p.categoriaId === subcategoriaSelecionada),
+        );
+      }
+      return;
+    }
+
+    let ativo = true;
+
+    const carregarCategoria = async () => {
+      setCarregandoCategoria(true);
+      try {
+        const response = await api.get("/produtos", {
+          params: { categoriaId: subcategoriaSelecionada },
+        });
+        if (!ativo) return;
+        const lista = (response.data ?? []).map((p: Record<string, unknown>) =>
+          normalizarProduto(p),
+        );
+        setProdutosSubcategoria(lista);
+      } catch {
+        if (!ativo) return;
+        setProdutosSubcategoria([]);
+      } finally {
+        if (ativo) {
+          setCarregandoCategoria(false);
+        }
+      }
+    };
+
+    carregarCategoria();
+
+    return () => {
+      ativo = false;
+    };
+  }, [subcategoriaSelecionada, usandoDemo]);
 
   const selecionarCategoriaRaiz = (id: string) => {
     setCategoriaPaiSelecionada(id);
@@ -213,7 +239,7 @@ const Home = () => {
                 substituir estes itens.
               </p>
             )}
-            {aguardandoCatalogo ? (
+            {carregandoInicial ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="success" role="status">
                   <span className="visually-hidden">Carregando produtos...</span>
@@ -245,7 +271,7 @@ const Home = () => {
         <section className="destaques-section">
           <Container>
             <h2 className="section-title text-center">{tituloCatalogo}</h2>
-            {aguardandoCatalogo ? (
+            {carregandoCategoria ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="success" role="status">
                   <span className="visually-hidden">Carregando produtos...</span>

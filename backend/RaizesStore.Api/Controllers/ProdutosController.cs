@@ -26,7 +26,9 @@ public class ProdutosController : ControllerBase
         [FromQuery] Guid? categoriaId,
         [FromQuery] Guid? categoriaPaiId,
         [FromQuery] TipoProduto? tipoProduto,
-        [FromQuery] bool incluirInativos = false)
+        [FromQuery] bool incluirInativos = false,
+        [FromQuery] bool recentes = false,
+        [FromQuery] int? limite = null)
     {
         if (incluirInativos && !_adminOptions.IsAdmin(Request.Headers["X-User-Email"].FirstOrDefault()))
         {
@@ -61,7 +63,16 @@ public class ProdutosController : ControllerBase
             query = query.Where(p => p.TipoProduto == tipoProduto.Value);
         }
 
-        return await query.OrderBy(p => p.Nome).ToListAsync();
+        query = recentes || limite.HasValue
+            ? query.OrderByDescending(p => p.CreatedAt)
+            : query.OrderBy(p => p.Nome);
+
+        if (limite.HasValue)
+        {
+            query = query.Take(Math.Clamp(limite.Value, 1, 50));
+        }
+
+        return await query.ToListAsync();
     }
 
     [HttpGet("{id}")]
