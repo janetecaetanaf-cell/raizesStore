@@ -89,7 +89,9 @@ const Login = () => {
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
           <Alert variant="info" className="mb-3">
-            Para comprar na loja, é necessário <strong>criar uma conta</strong> com e-mail e senha.
+            <strong>Conta obrigatória para comprar.</strong> Crie sua conta com e-mail e senha na aba{' '}
+            <strong>Cadastre-se</strong> ou entre em <strong>Login</strong> se já tiver cadastro. O pagamento
+            do pedido é feito via Pix depois de confirmar a compra.
           </Alert>
           {mensagemCompra && (
             <Alert variant="primary" className="mb-3">
