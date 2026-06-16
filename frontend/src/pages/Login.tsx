@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { showToast } from '../utils/toast';
 import { obterRedirectSeguro } from '../utils/authRedirect';
+import { PAGAMENTO } from '../config/loja';
 
 const Login = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'cadastro'>('login');
@@ -51,12 +52,12 @@ const Login = () => {
   const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (dadosCadastro.senha !== dadosCadastro.confirmarSenha) {
+    if (dadosCadastro.senha && dadosCadastro.senha !== dadosCadastro.confirmarSenha) {
       showToast('As senhas não coincidem', 'error');
       return;
     }
 
-    if (dadosCadastro.senha.length < 6) {
+    if (dadosCadastro.senha && dadosCadastro.senha.length < 6) {
       showToast('A senha deve ter pelo menos 6 caracteres', 'error');
       return;
     }
@@ -85,6 +86,12 @@ const Login = () => {
     <Container className="my-5">
       <Row className="justify-content-center">
         <Col md={8} lg={6}>
+          {PAGAMENTO.modo === 'pix-manual' && (
+            <Alert variant="success" className="mb-3">
+              Para comprar com Pix, você <strong>não precisa de conta</strong>. Adicione ao carrinho e
+              finalize a compra direto.
+            </Alert>
+          )}
           {mensagemCompra && (
             <Alert variant="info" className="mb-3">
               {mensagemCompra}
@@ -120,7 +127,7 @@ const Login = () => {
                           placeholder="Opcional (para futuras implementações)"
                         />
                         <Form.Text className="text-muted">
-                          Por enquanto, apenas o email é necessário
+                          Primeira vez? Use a aba <strong>Cadastre-se</strong>. A senha ainda não é verificada.
                         </Form.Text>
                       </Form.Group>
 
@@ -210,26 +217,25 @@ const Login = () => {
                       </Row>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Senha *</Form.Label>
+                        <Form.Label>Senha</Form.Label>
                         <Form.Control
                           type="password"
-                          required
                           value={dadosCadastro.senha}
                           onChange={(e) =>
                             setDadosCadastro({ ...dadosCadastro, senha: e.target.value })
                           }
                           minLength={6}
+                          placeholder="Opcional por enquanto"
                         />
                         <Form.Text className="text-muted">
-                          Mínimo de 6 caracteres
+                          Opcional — mínimo de 6 caracteres se preencher
                         </Form.Text>
                       </Form.Group>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Confirmar Senha *</Form.Label>
+                        <Form.Label>Confirmar senha</Form.Label>
                         <Form.Control
                           type="password"
-                          required
                           value={dadosCadastro.confirmarSenha}
                           onChange={(e) =>
                             setDadosCadastro({
@@ -237,6 +243,7 @@ const Login = () => {
                               confirmarSenha: e.target.value,
                             })
                           }
+                          placeholder="Repita a senha, se informou uma"
                         />
                       </Form.Group>
 

@@ -36,29 +36,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (email: string, senha?: string) => {
-    // Buscar cliente pelo email
+  const login = async (email: string, _senha?: string) => {
+    const emailNormalizado = email.trim().toLowerCase();
+    if (!emailNormalizado) {
+      throw new Error('Informe o e-mail.');
+    }
+
     try {
-      const response = await api.get('/clientes');
-      const clientes = response.data;
-      const cliente = Array.isArray(clientes) 
-        ? clientes.find((c: any) => c.email === email) 
-        : null;
-      
-      if (cliente) {
-        const usuarioData: Usuario = {
-          id: cliente.id ?? cliente.Id,
-          nome: cliente.nome ?? cliente.Nome,
-          email: cliente.email ?? cliente.Email,
-          telefoneCelular: cliente.telefoneCelular ?? cliente.TelefoneCelular,
-        };
-        setUsuario(usuarioData);
-        localStorage.setItem('usuario', JSON.stringify(usuarioData));
-      } else {
-        throw new Error('Cliente não encontrado. Cadastre-se primeiro.');
-      }
+      const response = await api.get('/clientes/por-email', {
+        params: { email: emailNormalizado },
+      });
+      const cliente = response.data;
+
+      const usuarioData: Usuario = {
+        id: cliente.id ?? cliente.Id,
+        nome: cliente.nome ?? cliente.Nome,
+        email: cliente.email ?? cliente.Email,
+        telefoneCelular: cliente.telefoneCelular ?? cliente.TelefoneCelular,
+      };
+      setUsuario(usuarioData);
+      localStorage.setItem('usuario', JSON.stringify(usuarioData));
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erro ao fazer login');
+      if (error.response?.status === 404) {
+        throw new Error('E-mail não cadastrado. Use a aba Cadastre-se para criar sua conta.');
+      }
+      const msgApi =
+        error.response?.data?.message ??
+        error.response?.data ??
+        error.message;
+      throw new Error(
+        typeof msgApi === 'string' && msgApi.trim()
+          ? msgApi
+          : 'Não foi possível entrar. Tente novamente em instantes.'
+      );
     }
   };
 
@@ -96,7 +106,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUsuario(usuarioData);
       localStorage.setItem('usuario', JSON.stringify(usuarioData));
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Erro ao cadastrar');
+      const msgApi =
+        error.response?.data?.message ??
+        error.response?.data ??
+        error.message;
+      throw new Error(
+        typeof msgApi === 'string' && msgApi.trim()
+          ? msgApi
+          : 'Não foi possível cadastrar. Tente novamente em instantes.'
+      );
     }
   };
 
