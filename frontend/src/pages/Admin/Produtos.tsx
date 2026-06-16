@@ -76,7 +76,15 @@ const AdminProdutos = () => {
 
   const mostrarAlert = (type: 'success' | 'danger', message: string) => {
     setAlert({ type, message });
-    setTimeout(() => setAlert(null), 5000);
+    setTimeout(() => setAlert(null), 8000);
+  };
+
+  const obterCategoriaPadraoProduto = () => {
+    const subcategorias = getCategoriasFolha(categorias).filter((c) => c.ativo);
+    if (subcategorias.length > 0) {
+      return subcategorias[0].id;
+    }
+    return categorias.find((c) => c.ativo && !c.categoriaPaiId)?.id ?? '';
   };
 
   // ========== CATEGORIAS ==========
@@ -182,7 +190,7 @@ const AdminProdutos = () => {
         nome: '',
         descricao: '',
         preco: 0,
-        categoriaId: categorias[0]?.id || '',
+        categoriaId: obterCategoriaPadraoProduto(),
         tipoProduto: TipoProduto.Camiseta,
         ativo: true,
         estoque: 0,
@@ -215,12 +223,26 @@ const AdminProdutos = () => {
         mostrarAlert('danger', 'O nome do produto é obrigatório');
         return;
       }
-      if (!produtoForm.categoriaId && categorias.length === 0) {
+      if (!produtoForm.categoriaId) {
+        mostrarAlert('danger', 'Selecione uma subcategoria (ex.: Kardecismo › Camisetas)');
+        return;
+      }
+      if (
+        getCategoriasFolha(categorias).length > 0 &&
+        !categoriaEhSubcategoria(produtoForm.categoriaId)
+      ) {
+        mostrarAlert(
+          'danger',
+          'Escolha uma subcategoria no menu (ex.: Kardecismo › Camisetas), não a categoria principal.',
+        );
+        return;
+      }
+      if (categorias.length === 0) {
         mostrarAlert('danger', 'É necessário cadastrar uma categoria primeiro');
         return;
       }
-      if (produtoForm.preco <= 0) {
-        mostrarAlert('danger', 'O preço deve ser maior que zero');
+      if (!produtoForm.preco || produtoForm.preco <= 0) {
+        mostrarAlert('danger', 'Informe um preço maior que zero');
         return;
       }
       if (Number(produtoForm.tipoProduto) === TipoProduto.Camiseta) {
@@ -243,7 +265,7 @@ const AdminProdutos = () => {
         Nome: produtoForm.nome.trim(),
         Descricao: produtoForm.descricao.trim(),
         Preco: produtoForm.preco,
-        CategoriaId: produtoForm.categoriaId || categorias[0]?.id,
+        CategoriaId: produtoForm.categoriaId,
         TipoProduto: produtoForm.tipoProduto,
         Ativo: produtoForm.ativo,
         Estoque: produtoForm.estoque,
@@ -271,7 +293,9 @@ const AdminProdutos = () => {
       console.error('Erro ao salvar produto:', error);
       const data = error.response?.data;
       let errorMessage = 'Erro ao salvar produto';
-      if (data?.errors) {
+      if (typeof data === 'string' && data.trim()) {
+        errorMessage = data;
+      } else if (data?.errors) {
         const detalhes = Object.entries(data.errors as Record<string, string[]>)
           .map(([campo, msgs]) => `${campo}: ${msgs.join(', ')}`)
           .join('; ');
@@ -713,6 +737,11 @@ const AdminProdutos = () => {
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {alert && (
+            <Alert variant={alert.type} dismissible onClose={() => setAlert(null)} className="mb-3">
+              {alert.message}
+            </Alert>
+          )}
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>Nome *</Form.Label>
@@ -740,9 +769,12 @@ const AdminProdutos = () => {
                 <Form.Control
                   type="number"
                   step="0.01"
-                  value={produtoForm.preco}
-                  onChange={(e) => atualizarProdutoForm('preco', Number(e.target.value))}
-                  placeholder="0.00"
+                  min="0.01"
+                  value={produtoForm.preco > 0 ? produtoForm.preco : ''}
+                  onChange={(e) =>
+                    atualizarProdutoForm('preco', e.target.value === '' ? 0 : Number(e.target.value))
+                  }
+                  placeholder="0,00"
                   required
                 />
               </Form.Group>

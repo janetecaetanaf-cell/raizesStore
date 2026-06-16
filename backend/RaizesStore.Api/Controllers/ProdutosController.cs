@@ -89,6 +89,13 @@ public class ProdutosController : ControllerBase
             return BadRequest("Categoria não encontrada");
         }
 
+        var categoriaTemSubcategorias = await _context.Categorias
+            .AnyAsync(c => c.CategoriaPaiId == dto.CategoriaId && c.DeletedAt == null);
+        if (categoriaTemSubcategorias)
+        {
+            return BadRequest("Cadastre o produto em uma subcategoria (ex.: Kardecismo › Camisetas).");
+        }
+
         var produto = new Produto(dto.Nome, dto.Descricao, dto.Preco, dto.CategoriaId, dto.TipoProduto, dto.Ativo);
         produto.AtualizarEstoque(dto.Estoque);
 
@@ -128,6 +135,19 @@ public class ProdutosController : ControllerBase
         if (produto == null || produto.DeletedAt != null)
         {
             return NotFound();
+        }
+
+        var categoria = await _context.Categorias.FindAsync(dto.CategoriaId);
+        if (categoria == null)
+        {
+            return BadRequest("Categoria não encontrada");
+        }
+
+        var categoriaTemSubcategorias = await _context.Categorias
+            .AnyAsync(c => c.CategoriaPaiId == dto.CategoriaId && c.DeletedAt == null);
+        if (categoriaTemSubcategorias)
+        {
+            return BadRequest("Cadastre o produto em uma subcategoria (ex.: Kardecismo › Camisetas).");
         }
 
         produto.Atualizar(dto.Nome, dto.Descricao, dto.Preco, dto.CategoriaId, dto.Ativo, dto.Estoque);
