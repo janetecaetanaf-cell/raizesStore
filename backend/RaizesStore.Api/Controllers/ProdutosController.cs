@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RaizesStore.Api.Filters;
+using RaizesStore.Api.Options;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
 
@@ -10,10 +13,12 @@ namespace RaizesStore.Api.Controllers;
 public class ProdutosController : ControllerBase
 {
     private readonly RaizesStoreDbContext _context;
+    private readonly AdminOptions _adminOptions;
 
-    public ProdutosController(RaizesStoreDbContext context)
+    public ProdutosController(RaizesStoreDbContext context, IOptions<AdminOptions> adminOptions)
     {
         _context = context;
+        _adminOptions = adminOptions.Value;
     }
 
     [HttpGet]
@@ -22,6 +27,11 @@ public class ProdutosController : ControllerBase
         [FromQuery] TipoProduto? tipoProduto,
         [FromQuery] bool incluirInativos = false)
     {
+        if (incluirInativos && !_adminOptions.IsAdmin(Request.Headers["X-User-Email"].FirstOrDefault()))
+        {
+            return Unauthorized(new { message = "Acesso restrito ao administrador da loja." });
+        }
+
         var query = _context.Produtos
             .Include(p => p.Categoria)
             .Where(p => p.DeletedAt == null);
@@ -60,6 +70,7 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpPost]
+    [AdminAuthorize]
     public async Task<ActionResult<Produto>> CreateProduto(CreateProdutoDto dto)
     {
         var categoria = await _context.Categorias.FindAsync(dto.CategoriaId);
@@ -100,6 +111,7 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [AdminAuthorize]
     public async Task<IActionResult> UpdateProduto(Guid id, UpdateProdutoDto dto)
     {
         var produto = await _context.Produtos.FindAsync(id);
@@ -149,6 +161,7 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AdminAuthorize]
     public async Task<IActionResult> DeleteProduto(Guid id)
     {
         var produto = await _context.Produtos.FindAsync(id);

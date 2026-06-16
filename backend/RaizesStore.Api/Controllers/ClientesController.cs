@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using RaizesStore.Api.Filters;
 using RaizesStore.Api.Options;
 using RaizesStore.Api.Services;
 using RaizesStore.Domain.Entities;
@@ -34,6 +35,7 @@ public class ClientesController : ControllerBase
     };
 
     [HttpGet]
+    [AdminAuthorize]
     public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
     {
         return await _context.Clientes

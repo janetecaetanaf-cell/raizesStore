@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using RaizesStore.Api.Filters;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
 
@@ -18,6 +19,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpGet]
+    [AdminAuthorize]
     public async Task<ActionResult<IEnumerable<Pedido>>> GetPedidos([FromQuery] StatusPedido? status)
     {
         var query = _context.Pedidos
@@ -36,6 +38,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AdminAuthorize]
     public async Task<ActionResult<Pedido>> GetPedido(Guid id)
     {
         var pedido = await _context.Pedidos
@@ -171,6 +174,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPost("{id}/confirmar-pagamento")]
+    [AdminAuthorize]
     public async Task<IActionResult> ConfirmarPagamento(Guid id)
     {
         try
@@ -198,6 +202,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPost("{id}/enviar")]
+    [AdminAuthorize]
     public async Task<IActionResult> EnviarPedido(Guid id, EnviarPedidoDto dto)
     {
         try
@@ -225,6 +230,7 @@ public class PedidosController : ControllerBase
     }
 
     [HttpPost("{id}/entregue")]
+    [AdminAuthorize]
     public async Task<IActionResult> MarcarComoEntregue(Guid id)
     {
         try

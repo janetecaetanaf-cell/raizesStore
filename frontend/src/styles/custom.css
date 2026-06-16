@@ -236,6 +236,7 @@ body {
 .hero-symbol .hero-logo {
   width: 260px;
   max-width: 100%;
+  height: auto;
   object-fit: contain;
   filter: drop-shadow(0 8px 32px rgba(0, 0, 0, 0.35));
 }

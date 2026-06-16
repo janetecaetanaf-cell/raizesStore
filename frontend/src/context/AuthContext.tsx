@@ -23,6 +23,7 @@ interface AuthContextType {
   logout: () => void;
   estaAutenticado: boolean;
   isAdmin: boolean;
+  carregando: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,16 +38,18 @@ const extrairUsuario = (cliente: Record<string, unknown>): Usuario => ({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem('usuario');
     if (usuarioSalvo) {
       try {
-        setUsuario(JSON.parse(usuarioSalvo));
+        setUsuario(extrairUsuario(JSON.parse(usuarioSalvo)));
       } catch {
         localStorage.removeItem('usuario');
       }
     }
+    setCarregando(false);
   }, []);
 
   const salvarUsuario = (usuarioData: Usuario) => {
@@ -126,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout,
         estaAutenticado: !!usuario,
         isAdmin: usuario?.isAdmin ?? false,
+        carregando,
       }}
     >
       {children}

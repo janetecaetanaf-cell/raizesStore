@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using RaizesStore.Api.Filters;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
 
@@ -40,6 +41,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPost]
+    [AdminAuthorize]
     public async Task<ActionResult<Categoria>> CreateCategoria(CreateCategoriaDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Nome))
@@ -60,6 +62,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [AdminAuthorize]
     public async Task<IActionResult> UpdateCategoria(Guid id, UpdateCategoriaDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Nome))
@@ -87,6 +90,7 @@ public class CategoriasController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [AdminAuthorize]
     public async Task<IActionResult> DeleteCategoria(Guid id)
     {
         var categoria = await _context.Categorias.FindAsync(id);

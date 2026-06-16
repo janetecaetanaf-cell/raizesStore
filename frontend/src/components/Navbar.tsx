@@ -26,7 +26,7 @@ const Navbar = () => {
         <Container>
           <BootstrapNavbar.Brand as={Link} to="/" className="store-brand">
             <img
-              src="/images/logo-raizes.png"
+              src="/images/logo-raizes-circulo.png"
               alt="Raízes Estampas"
               className="brand-logo"
             />

@@ -16,7 +16,9 @@ const Login = () => {
     ? 'Crie sua conta ou entre para finalizar a compra.'
     : redirect.startsWith('/produto/')
       ? 'Crie sua conta ou entre para comprar este produto.'
-      : null;
+      : redirect.startsWith('/admin')
+        ? 'Faça login com a conta de administradora para acessar o painel.'
+        : null;
 
   const [emailLogin, setEmailLogin] = useState('');
   const [senhaLogin, setSenhaLogin] = useState('');
