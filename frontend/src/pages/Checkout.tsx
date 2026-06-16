@@ -548,7 +548,7 @@ const Checkout = () => {
                       disabled={formularioBloqueado || buscandoCep}
                       value={endereco.cep}
                       onChange={(e) => handleCepChange(e.target.value)}
-                      onBlur={() => preencherEnderecoPorCep(limparCep(endereco.cep))}
+                      onBlur={(e) => preencherEnderecoPorCep(limparCep(e.target.value))}
                     />
                     {buscandoCep && (
                       <Form.Text className="text-muted">Buscando endereço...</Form.Text>
