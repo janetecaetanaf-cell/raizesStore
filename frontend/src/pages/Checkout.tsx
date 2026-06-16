@@ -212,8 +212,48 @@ const Checkout = () => {
     showToast('Chave Pix copiada!', 'success');
   };
 
-  const confirmarPedidoManual = () => {
-    const numeroPedido = `RS-${Date.now().toString(36).toUpperCase().slice(-8)}`;
+  const criarPedidoNoServidor = async () => {
+    if (!usuario) {
+      throw new Error('Faça login para finalizar a compra.');
+    }
+
+    const itensValidos = itens.filter((item) => !item.produto.id.startsWith('demo-'));
+    if (itensValidos.length === 0) {
+      throw new Error('Os produtos do carrinho não estão disponíveis. Adicione itens da loja novamente.');
+    }
+
+    const dataNascimentoFormatada = new Date(cliente.dataNascimento).toISOString();
+
+    const response = await api.post('/checkout/finalizar', {
+      Nome: cliente.nome || usuario.nome,
+      Email: cliente.email || usuario.email,
+      TelefoneCelular: cliente.telefoneCelular || usuario.telefoneCelular,
+      DataNascimento: dataNascimentoFormatada,
+      Cpf: cliente.cpf?.trim() || null,
+      Cep: endereco.cep,
+      Logradouro: endereco.logradouro,
+      Numero: endereco.numero,
+      Bairro: endereco.bairro,
+      Cidade: endereco.cidade,
+      Estado: endereco.estado,
+      Complemento: endereco.complemento || null,
+      Itens: itensValidos.map((item) => ({
+        ProdutoId: item.produto.id,
+        Quantidade: item.quantidade,
+        Tamanho: item.tamanho ?? null,
+        Cor: item.cor ?? null,
+      })),
+    });
+
+    return {
+      idPedido: String(response.data.pedidoId ?? response.data.PedidoId),
+      numeroPedido: String(response.data.numeroPedido ?? response.data.NumeroPedido),
+    };
+  };
+
+  const confirmarPedidoManual = async () => {
+    const { numeroPedido } = await criarPedidoNoServidor();
+
     const itensLinhas = itens
       .map((item) => {
         const tamanho = item.tamanho ? ` | Tam: ${TamanhoProduto[item.tamanho]}` : '';
@@ -316,7 +356,23 @@ const Checkout = () => {
     if (usaPixManual) {
       if (pedidoManualConfirmado) return;
       if (!validarFormulario()) return;
-      confirmarPedidoManual();
+
+      setLoading(true);
+      setErroPagamento(null);
+
+      try {
+        await confirmarPedidoManual();
+      } catch (error: unknown) {
+        const err = error as { response?: { data?: { message?: string } }; message?: string };
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          'Erro ao registrar o pedido. Tente novamente.';
+        setErroPagamento(msg);
+        showToast(typeof msg === 'string' ? msg : 'Erro ao registrar o pedido.', 'error');
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -335,37 +391,7 @@ const Checkout = () => {
 
       if (!validarFormulario()) return;
 
-      const itensValidos = itens.filter((item) => !item.produto.id.startsWith('demo-'));
-      if (itensValidos.length === 0) {
-        showToast('Os produtos do carrinho não estão disponíveis. Adicione itens da loja novamente.', 'error');
-        return;
-      }
-
-      const dataNascimentoFormatada = new Date(cliente.dataNascimento).toISOString();
-
-      const response = await api.post('/checkout/finalizar', {
-        Nome: cliente.nome || usuario.nome,
-        Email: cliente.email || usuario.email,
-        TelefoneCelular: cliente.telefoneCelular || usuario.telefoneCelular,
-        DataNascimento: dataNascimentoFormatada,
-        Cpf: cliente.cpf?.trim() || null,
-        Cep: endereco.cep,
-        Logradouro: endereco.logradouro,
-        Numero: endereco.numero,
-        Bairro: endereco.bairro,
-        Cidade: endereco.cidade,
-        Estado: endereco.estado,
-        Complemento: endereco.complemento || null,
-        Itens: itensValidos.map((item) => ({
-          ProdutoId: item.produto.id,
-          Quantidade: item.quantidade,
-          Tamanho: item.tamanho ?? null,
-          Cor: item.cor ?? null,
-        })),
-      });
-
-      const idPedido = String(response.data.pedidoId ?? response.data.PedidoId);
-      const numeroPedido = response.data.numeroPedido ?? response.data.NumeroPedido;
+      const { idPedido, numeroPedido } = await criarPedidoNoServidor();
 
       await processarPagamento(idPedido);
 
