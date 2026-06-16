@@ -78,6 +78,7 @@ export interface Produto {
   coresDisponiveis: CorProduto[];
   imagens: string[];
   imagensPorCor?: Partial<Record<CorProduto, string>>;
+  createdAt?: string;
 }
 
 export interface Cliente {

@@ -22,6 +22,7 @@ export const normalizarProduto = (data: Record<string, unknown>): Produto => {
     ) as CorProduto[],
     imagens: asArray<string>(data.imagens ?? data.Imagens).filter(Boolean),
     imagensPorCor: parseImagensPorCor(data.imagensPorCor ?? data.ImagensPorCor),
+    createdAt: String(data.createdAt ?? data.CreatedAt ?? ''),
   };
 };
 

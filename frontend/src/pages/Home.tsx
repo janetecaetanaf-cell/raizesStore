@@ -20,21 +20,46 @@ const filtrarCategorias = (cats: Categoria[]) =>
   cats.filter((c) => !CATEGORIAS_OCULTAS.includes(c.nome));
 
 const DESTAQUES_POR_TIPO = 4;
+/** Quantos produtos recentes entram no sorteio por tipo (novidades sempre no pool). */
+const JANELA_DESTAQUES = 12;
 
-/** Na aba Todos: equilibra camisetas e canecas; em categoria específica, mostra até 8 itens. */
+const obterDataCriacao = (produto: Produto) =>
+  produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
+
+const embaralhar = <T,>(lista: T[]): T[] => {
+  const copia = [...lista];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+};
+
+/** Sorteia entre os produtos mais recentes de um tipo. */
+const amostrarDestaquesDoTipo = (lista: Produto[], limite: number): Produto[] => {
+  const recentes = [...lista].sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a));
+  const pool = recentes.slice(0, Math.min(JANELA_DESTAQUES, recentes.length));
+  return embaralhar(pool).slice(0, limite);
+};
+
+/** Na aba Todos: equilibra camisetas e canecas com novidades; em categoria, os 8 mais recentes. */
 const selecionarDestaques = (lista: Produto[], categoriaId: string): Produto[] => {
   if (categoriaId) {
-    return lista.slice(0, 8);
+    return [...lista]
+      .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))
+      .slice(0, 8);
   }
 
-  const camisetas = lista
-    .filter((p) => p.tipoProduto === TipoProduto.Camiseta)
-    .slice(0, DESTAQUES_POR_TIPO);
-  const canecas = lista
-    .filter((p) => p.tipoProduto === TipoProduto.Caneca)
-    .slice(0, DESTAQUES_POR_TIPO);
+  const camisetas = amostrarDestaquesDoTipo(
+    lista.filter((p) => p.tipoProduto === TipoProduto.Camiseta),
+    DESTAQUES_POR_TIPO,
+  );
+  const canecas = amostrarDestaquesDoTipo(
+    lista.filter((p) => p.tipoProduto === TipoProduto.Caneca),
+    DESTAQUES_POR_TIPO,
+  );
 
-  return [...camisetas, ...canecas];
+  return embaralhar([...camisetas, ...canecas]);
 };
 
 const Home = () => {
