@@ -24,6 +24,7 @@ public class ProdutosController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos(
         [FromQuery] Guid? categoriaId,
+        [FromQuery] Guid? categoriaPaiId,
         [FromQuery] TipoProduto? tipoProduto,
         [FromQuery] bool incluirInativos = false)
     {
@@ -44,6 +45,15 @@ public class ProdutosController : ControllerBase
         if (categoriaId.HasValue)
         {
             query = query.Where(p => p.CategoriaId == categoriaId.Value);
+        }
+        else if (categoriaPaiId.HasValue)
+        {
+            var subcategoriasIds = await _context.Categorias
+                .Where(c => c.CategoriaPaiId == categoriaPaiId && c.DeletedAt == null)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            query = query.Where(p => subcategoriasIds.Contains(p.CategoriaId));
         }
 
         if (tipoProduto.HasValue)

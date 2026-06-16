@@ -49,12 +49,20 @@ public class CategoriasController : ControllerBase
             return BadRequest("O nome da categoria é obrigatório");
         }
 
+        var erroPai = await ValidarCategoriaPaiAsync(dto.CategoriaPaiId);
+        if (erroPai != null)
+        {
+            return BadRequest(erroPai);
+        }
+
         var novaCategoria = new Categoria(dto.Nome, dto.Descricao ?? string.Empty, dto.Ativo);
         if (dto.Ordem > 0)
         {
             novaCategoria.DefinirOrdem(dto.Ordem);
         }
-        
+
+        novaCategoria.DefinirCategoriaPai(dto.CategoriaPaiId);
+
         _context.Categorias.Add(novaCategoria);
         await _context.SaveChangesAsync();
 
@@ -76,14 +84,25 @@ public class CategoriasController : ControllerBase
             return NotFound();
         }
 
+        if (dto.CategoriaPaiId == id)
+        {
+            return BadRequest("Uma categoria não pode ser pai de si mesma.");
+        }
+
+        var erroPai = await ValidarCategoriaPaiAsync(dto.CategoriaPaiId, id);
+        if (erroPai != null)
+        {
+            return BadRequest(erroPai);
+        }
+
         categoriaExistente.Atualizar(dto.Nome, dto.Descricao ?? string.Empty, dto.Ativo);
-        
-        // Atualizar ordem se fornecida
+        categoriaExistente.DefinirCategoriaPai(dto.CategoriaPaiId);
+
         if (dto.Ordem != categoriaExistente.Ordem)
         {
             categoriaExistente.DefinirOrdem(dto.Ordem);
         }
-        
+
         await _context.SaveChangesAsync();
 
         return NoContent();
@@ -99,10 +118,56 @@ public class CategoriasController : ControllerBase
             return NotFound();
         }
 
+        var temSubcategorias = await _context.Categorias
+            .AnyAsync(c => c.CategoriaPaiId == id && c.DeletedAt == null);
+        if (temSubcategorias)
+        {
+            return BadRequest("Remova ou mova as subcategorias antes de excluir esta categoria.");
+        }
+
+        var temProdutos = await _context.Produtos
+            .AnyAsync(p => p.CategoriaId == id && p.DeletedAt == null);
+        if (temProdutos)
+        {
+            return BadRequest("Existem produtos nesta categoria. Mova-os antes de excluir.");
+        }
+
         categoria.Delete();
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    private async Task<string?> ValidarCategoriaPaiAsync(Guid? categoriaPaiId, Guid? categoriaAtualId = null)
+    {
+        if (!categoriaPaiId.HasValue)
+        {
+            return null;
+        }
+
+        var pai = await _context.Categorias
+            .FirstOrDefaultAsync(c => c.Id == categoriaPaiId.Value && c.DeletedAt == null);
+        if (pai == null)
+        {
+            return "Categoria pai não encontrada.";
+        }
+
+        if (pai.CategoriaPaiId.HasValue)
+        {
+            return "Use apenas categorias principais como pai (um nível de subcategoria).";
+        }
+
+        if (categoriaAtualId.HasValue)
+        {
+            var temFilhos = await _context.Categorias
+                .AnyAsync(c => c.CategoriaPaiId == categoriaAtualId && c.DeletedAt == null);
+            if (temFilhos && categoriaPaiId.HasValue)
+            {
+                return "Categorias com subcategorias não podem virar subcategoria.";
+            }
+        }
+
+        return null;
     }
 }
 
@@ -112,6 +177,7 @@ public class CreateCategoriaDto
     public string? Descricao { get; set; }
     public bool Ativo { get; set; } = true;
     public int Ordem { get; set; }
+    public Guid? CategoriaPaiId { get; set; }
 }
 
 public class UpdateCategoriaDto
@@ -120,4 +186,5 @@ public class UpdateCategoriaDto
     public string? Descricao { get; set; }
     public bool Ativo { get; set; }
     public int Ordem { get; set; }
+    public Guid? CategoriaPaiId { get; set; }
 }

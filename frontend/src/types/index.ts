@@ -61,6 +61,7 @@ export interface Categoria {
   descricao: string;
   ativo: boolean;
   ordem: number;
+  categoriaPaiId?: string;
 }
 
 export interface Produto {

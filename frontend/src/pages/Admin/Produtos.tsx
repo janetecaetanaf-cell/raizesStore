@@ -5,6 +5,12 @@ import api from '../../services/api';
 import { Categoria, Produto, TipoProduto, TamanhoProduto, CorProduto, TIPO_PRODUTO_LABELS } from '../../types';
 import { Icon } from '../../components/Icon';
 import { normalizarProduto, COR_PRODUTO_HEX, valoresEnumNumericos } from '../../utils/produto';
+import {
+  getCategoriasRaiz,
+  getCategoriasFolha,
+  getNomeCategoriaCompleto,
+  normalizarCategorias,
+} from '../../utils/categorias';
 import EnumMultiSelect from '../../components/EnumMultiSelect';
 
 const AdminProdutos = () => {
@@ -16,7 +22,13 @@ const AdminProdutos = () => {
   // Estados para modal de categoria
   const [showCategoriaModal, setShowCategoriaModal] = useState(false);
   const [categoriaEditando, setCategoriaEditando] = useState<Categoria | null>(null);
-  const [categoriaForm, setCategoriaForm] = useState({ nome: '', descricao: '', ativo: true, ordem: 0 });
+  const [categoriaForm, setCategoriaForm] = useState({
+    nome: '',
+    descricao: '',
+    ativo: true,
+    ordem: 0,
+    categoriaPaiId: '',
+  });
   
   // Estados para modal de produto
   const [showProdutoModal, setShowProdutoModal] = useState(false);
@@ -52,7 +64,7 @@ const AdminProdutos = () => {
       ]);
       console.log('Categorias carregadas:', categoriasRes.data);
       console.log('Produtos carregados:', produtosRes.data);
-      setCategorias(categoriasRes.data || []);
+      setCategorias(normalizarCategorias(categoriasRes.data || []));
       setProdutos((produtosRes.data || []).map((p: Record<string, unknown>) => normalizarProduto(p)));
     } catch (error: any) {
       console.error('Erro ao carregar dados:', error);
@@ -76,10 +88,11 @@ const AdminProdutos = () => {
         descricao: categoria.descricao || '',
         ativo: categoria.ativo,
         ordem: categoria.ordem || 0,
+        categoriaPaiId: categoria.categoriaPaiId || '',
       });
     } else {
       setCategoriaEditando(null);
-      setCategoriaForm({ nome: '', descricao: '', ativo: true, ordem: 0 });
+      setCategoriaForm({ nome: '', descricao: '', ativo: true, ordem: 0, categoriaPaiId: '' });
     }
     setShowCategoriaModal(true);
   };
@@ -93,11 +106,12 @@ const AdminProdutos = () => {
       }
 
       // Converter para o formato esperado pelo backend (PascalCase)
-      const dados: any = {
+      const dados: Record<string, unknown> = {
         Nome: categoriaForm.nome.trim(),
         Descricao: categoriaForm.descricao.trim() || '',
         Ativo: categoriaForm.ativo,
         Ordem: categoriaForm.ordem || 0,
+        CategoriaPaiId: categoriaForm.categoriaPaiId || null,
       };
 
       // Se estiver editando, incluir o Id
@@ -479,7 +493,7 @@ const AdminProdutos = () => {
                             />
                           </td>
                           <td>{produto.nome}</td>
-                          <td>{produto.categoria?.nome || '-'}</td>
+                          <td>{getNomeCategoriaCompleto(produto.categoria, categorias)}</td>
                           <td>
                             <Badge bg="secondary">
                               {TIPO_PRODUTO_LABELS[produto.tipoProduto as TipoProduto] ?? produto.tipoProduto}
@@ -540,6 +554,7 @@ const AdminProdutos = () => {
                   <thead>
                     <tr>
                       <th>Nome</th>
+                      <th>Categoria pai</th>
                       <th>Descrição</th>
                       <th>Ordem</th>
                       <th>Status</th>
@@ -549,14 +564,29 @@ const AdminProdutos = () => {
                   <tbody>
                     {categorias.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-4">
+                        <td colSpan={6} className="text-center py-4">
                           Nenhuma categoria cadastrada
                         </td>
                       </tr>
                     ) : (
-                      categorias.map((categoria) => (
+                      categorias
+                        .slice()
+                        .sort((a, b) => {
+                          const paiA = a.categoriaPaiId ?? '';
+                          const paiB = b.categoriaPaiId ?? '';
+                          if (paiA !== paiB) return paiA.localeCompare(paiB);
+                          return a.ordem - b.ordem || a.nome.localeCompare(b.nome);
+                        })
+                        .map((categoria) => (
                         <tr key={categoria.id}>
-                          <td>{categoria.nome}</td>
+                          <td>
+                            {categoria.categoriaPaiId ? `↳ ${categoria.nome}` : categoria.nome}
+                          </td>
+                          <td>
+                            {categoria.categoriaPaiId
+                              ? categorias.find((c) => c.id === categoria.categoriaPaiId)?.nome ?? '-'
+                              : '—'}
+                          </td>
                           <td>{categoria.descricao || '-'}</td>
                           <td>{categoria.ordem || 0}</td>
                           <td>
@@ -602,12 +632,31 @@ const AdminProdutos = () => {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
+              <Form.Label>Categoria pai</Form.Label>
+              <Form.Select
+                value={categoriaForm.categoriaPaiId}
+                onChange={(e) => setCategoriaForm({ ...categoriaForm, categoriaPaiId: e.target.value })}
+              >
+                <option value="">Nenhuma (categoria principal)</option>
+                {getCategoriasRaiz(categorias)
+                  .filter((c) => c.id !== categoriaEditando?.id)
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </option>
+                  ))}
+              </Form.Select>
+              <Form.Text className="text-muted">
+                Principal: Fé Católica, Kardecismo… Subcategoria: Camisetas, Canecas…
+              </Form.Text>
+            </Form.Group>
+            <Form.Group className="mb-3">
               <Form.Label>Nome *</Form.Label>
               <Form.Control
                 type="text"
                 value={categoriaForm.nome}
                 onChange={(e) => setCategoriaForm({ ...categoriaForm, nome: e.target.value })}
-                placeholder="Ex: Camisetas"
+                placeholder="Ex: Fé Católica ou Camisetas"
                 required
               />
             </Form.Group>
@@ -710,13 +759,32 @@ const AdminProdutos = () => {
                   onChange={(e) => atualizarProdutoForm('categoriaId', e.target.value)}
                   required
                 >
-                  <option value="">Selecione uma categoria</option>
-                  {categorias.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nome}
-                    </option>
-                  ))}
+                  <option value="">Selecione uma subcategoria</option>
+                  {getCategoriasRaiz(categorias).map((pai) => {
+                    const filhas = categorias.filter((c) => c.categoriaPaiId === pai.id && c.ativo);
+                    if (filhas.length === 0) return null;
+                    return (
+                      <optgroup key={pai.id} label={pai.nome}>
+                        {filhas.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.nome}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+                  {getCategoriasFolha(categorias).length === 0 &&
+                    categorias
+                      .filter((c) => !c.categoriaPaiId)
+                      .map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.nome}
+                        </option>
+                      ))}
                 </Form.Select>
+                <Form.Text className="text-muted">
+                  Cadastre o produto na subcategoria (ex.: Fé Católica › Camisetas).
+                </Form.Text>
               </Form.Group>
               <Form.Group className="mb-3 col-md-6">
                 <Form.Label>Tipo de Produto *</Form.Label>

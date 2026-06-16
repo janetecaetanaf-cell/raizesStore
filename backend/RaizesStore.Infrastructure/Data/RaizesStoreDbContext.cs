@@ -31,6 +31,12 @@ public class RaizesStoreDbContext : DbContext
             entity.Property(e => e.Descricao).HasMaxLength(1000);
             entity.Property(e => e.Ativo).HasDefaultValue(true);
             entity.HasIndex(e => e.Nome);
+            entity.HasIndex(e => e.CategoriaPaiId);
+
+            entity.HasOne(e => e.CategoriaPai)
+                .WithMany()
+                .HasForeignKey(e => e.CategoriaPaiId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Produto

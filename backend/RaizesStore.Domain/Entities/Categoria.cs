@@ -17,6 +17,8 @@ public class Categoria : Entity
     public string Descricao { get; protected set; } = string.Empty;
     public bool Ativo { get; protected set; }
     public int Ordem { get; protected set; }
+    public Guid? CategoriaPaiId { get; protected set; }
+    public Categoria? CategoriaPai { get; protected set; }
 
     public void Atualizar(string nome, string descricao, bool ativo)
     {
@@ -29,6 +31,12 @@ public class Categoria : Entity
     public void DefinirOrdem(int ordem)
     {
         Ordem = ordem;
+        SetUpdateAt();
+    }
+
+    public void DefinirCategoriaPai(Guid? categoriaPaiId)
+    {
+        CategoriaPaiId = categoriaPaiId;
         SetUpdateAt();
     }
 }

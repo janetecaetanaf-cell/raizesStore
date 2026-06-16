@@ -273,6 +273,16 @@ body {
   border-color: var(--green-deep) !important;
 }
 
+.category-pills-sub {
+  margin-top: 0.25rem;
+}
+
+.category-pill-sub {
+  font-size: 0.82rem !important;
+  padding: 0.3rem 0.9rem !important;
+  border-style: dashed;
+}
+
 /* ===== Destaques ===== */
 .destaques-section {
   padding: 3rem 0 4rem;
