@@ -55,6 +55,21 @@ builder.Services.AddSwaggerGen();
 builder.Services.Configure<RaizesStore.Api.Options.PagSeguroOptions>(
     builder.Configuration.GetSection(RaizesStore.Api.Options.PagSeguroOptions.SectionName));
 
+builder.Services.Configure<RaizesStore.Api.Options.AdminOptions>(
+    builder.Configuration.GetSection(RaizesStore.Api.Options.AdminOptions.SectionName));
+
+builder.Services.PostConfigure<RaizesStore.Api.Options.AdminOptions>(options =>
+{
+    var emails = Environment.GetEnvironmentVariable("ADMIN_EMAILS");
+    if (!string.IsNullOrWhiteSpace(emails))
+    {
+        options.Emails = emails
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(e => e.Trim().ToLowerInvariant())
+            .ToList();
+    }
+});
+
 builder.Services.PostConfigure<RaizesStore.Api.Options.PagSeguroOptions>(options =>
 {
     options.Email = options.Email.Trim();

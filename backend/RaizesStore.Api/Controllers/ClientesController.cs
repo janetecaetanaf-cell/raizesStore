@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RaizesStore.Api.Options;
 using RaizesStore.Api.Services;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
@@ -11,11 +13,25 @@ namespace RaizesStore.Api.Controllers;
 public class ClientesController : ControllerBase
 {
     private readonly RaizesStoreDbContext _context;
+    private readonly AdminOptions _adminOptions;
 
-    public ClientesController(RaizesStoreDbContext context)
+    public ClientesController(RaizesStoreDbContext context, IOptions<AdminOptions> adminOptions)
     {
         _context = context;
+        _adminOptions = adminOptions.Value;
     }
+
+    private object MontarRespostaCliente(Cliente cliente) => new
+    {
+        cliente.Id,
+        cliente.Nome,
+        cliente.Email,
+        cliente.TelefoneCelular,
+        cliente.DataNascimento,
+        cliente.Cpf,
+        cliente.Enderecos,
+        isAdmin = _adminOptions.IsAdmin(cliente.Email),
+    };
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
@@ -50,7 +66,7 @@ public class ClientesController : ControllerBase
             return Unauthorized(new { message = "E-mail ou senha incorretos." });
         }
 
-        return cliente;
+        return Ok(MontarRespostaCliente(cliente));
     }
 
     [HttpGet("por-email")]
@@ -153,7 +169,7 @@ public class ClientesController : ControllerBase
             .Include(c => c.Enderecos)
             .FirstOrDefaultAsync(c => c.Id == cliente.Id);
 
-        return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, clienteCompleto);
+        return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, MontarRespostaCliente(clienteCompleto!));
     }
 
     [HttpPut("{id:guid}")]

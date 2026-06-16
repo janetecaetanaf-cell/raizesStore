@@ -10,8 +10,8 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { itens } = useCarrinho();
-  const { usuario, estaAutenticado, logout } = useAuth();
-  const isAdmin = location.pathname.startsWith('/admin');
+  const { usuario, estaAutenticado, isAdmin, logout } = useAuth();
+  const isAdminRoute = location.pathname.startsWith('/admin');
   const totalItensCarrinho = itens.reduce((acc, item) => acc + item.quantidade, 0);
 
   const handleLogout = () => {
@@ -21,7 +21,7 @@ const Navbar = () => {
 
   return (
     <>
-      {!isAdmin && <AnnouncementBar />}
+      {!isAdminRoute && <AnnouncementBar />}
       <BootstrapNavbar expand="lg" className="store-navbar sticky-top">
         <Container>
           <BootstrapNavbar.Brand as={Link} to="/" className="store-brand">
@@ -40,7 +40,7 @@ const Navbar = () => {
 
           <BootstrapNavbar.Collapse id="store-navbar">
             <Nav className="mx-auto store-nav-links">
-              {!isAdmin ? (
+              {!isAdminRoute ? (
                 <>
                   <Nav.Link as={Link} to="/">Início</Nav.Link>
                   <NavDropdown title="Produtos" id="nav-produtos">
@@ -76,7 +76,7 @@ const Navbar = () => {
             </Nav>
 
             <Nav className="store-nav-actions align-items-center">
-              {!isAdmin && (
+              {!isAdminRoute && (
                 <Nav.Link as={Link} to="/carrinho" className="cart-link position-relative">
                   <Icon icon={FiShoppingCart} size={22} />
                   {totalItensCarrinho > 0 && (
@@ -95,7 +95,7 @@ const Navbar = () => {
                   id="user-dropdown"
                   align="end"
                 >
-                  {!isAdmin && (
+                  {isAdmin && (
                     <NavDropdown.Item as={Link} to="/admin">
                       <Icon icon={FiBarChart2} className="me-2" /> Admin
                     </NavDropdown.Item>

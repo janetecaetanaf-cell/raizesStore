@@ -7,4 +7,21 @@ const api = axios.create({
   },
 });
 
+// Envia o e-mail do usuário logado em cada requisição para que
+// o backend possa verificar permissões de admin.
+api.interceptors.request.use((config) => {
+  const usuarioSalvo = localStorage.getItem('usuario');
+  if (usuarioSalvo) {
+    try {
+      const usuario = JSON.parse(usuarioSalvo);
+      if (usuario?.email) {
+        config.headers['X-User-Email'] = usuario.email;
+      }
+    } catch {
+      // ignora localStorage corrompido
+    }
+  }
+  return config;
+});
+
 export default api;

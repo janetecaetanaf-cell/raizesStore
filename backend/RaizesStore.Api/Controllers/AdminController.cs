@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using RaizesStore.Api.Filters;
+using RaizesStore.Api.Options;
 using RaizesStore.Domain.Entities;
 using RaizesStore.Infrastructure.Data;
 
@@ -7,6 +10,7 @@ namespace RaizesStore.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AdminAuthorize]
 public class AdminController : ControllerBase
 {
     private readonly RaizesStoreDbContext _context;

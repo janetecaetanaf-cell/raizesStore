@@ -18,6 +18,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 
 function AppContent() {
   const location = useLocation();
@@ -46,10 +47,10 @@ function AppContent() {
           <Route path="/pagamento/sucesso" element={<PagamentoStatus variant="sucesso" />} />
           <Route path="/pagamento/pendente" element={<PagamentoStatus variant="pendente" />} />
           <Route path="/pagamento/falha" element={<PagamentoStatus variant="falha" />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/produtos" element={<AdminProdutos />} />
-          <Route path="/admin/pedidos" element={<AdminPedidos />} />
-          <Route path="/admin/clientes" element={<AdminClientes />} />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/produtos" element={<AdminRoute><AdminProdutos /></AdminRoute>} />
+          <Route path="/admin/pedidos" element={<AdminRoute><AdminPedidos /></AdminRoute>} />
+          <Route path="/admin/clientes" element={<AdminRoute><AdminClientes /></AdminRoute>} />
         </Routes>
       </main>
       <Footer />
