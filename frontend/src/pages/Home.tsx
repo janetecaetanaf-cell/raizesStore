@@ -2,55 +2,34 @@ import { useState, useEffect, useMemo } from "react";
 import { Container, Row, Col, Nav } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { Produto, Categoria, TipoProduto } from "../types";
+import { Produto, Categoria } from "../types";
 import { produtosDemo, categoriasDemo } from "../data/demoProdutos";
 import { normalizarProduto } from "../utils/produto";
 import {
   getCategoriasRaiz,
   getSubcategorias,
+  getIdsSubcategorias,
   normalizarCategorias,
+  selecionarDestaquesPorLinha,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
 
-const DESTAQUES_POR_TIPO = 4;
-const JANELA_DESTAQUES = 12;
-
 const obterDataCriacao = (produto: Produto) =>
   produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
 
-const embaralhar = <T,>(lista: T[]): T[] => {
-  const copia = [...lista];
-  for (let i = copia.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copia[i], copia[j]] = [copia[j], copia[i]];
-  }
-  return copia;
-};
-
-const amostrarDestaquesDoTipo = (lista: Produto[], limite: number): Produto[] => {
-  const recentes = [...lista].sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a));
-  const pool = recentes.slice(0, Math.min(JANELA_DESTAQUES, recentes.length));
-  return embaralhar(pool).slice(0, limite);
-};
-
-const selecionarDestaques = (lista: Produto[], comFiltroCategoria: boolean): Produto[] => {
+const selecionarDestaques = (
+  lista: Produto[],
+  comFiltroCategoria: boolean,
+  categorias: Categoria[],
+): Produto[] => {
   if (comFiltroCategoria) {
     return [...lista]
       .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))
       .slice(0, 8);
   }
 
-  const camisetas = amostrarDestaquesDoTipo(
-    lista.filter((p) => p.tipoProduto === TipoProduto.Camiseta),
-    DESTAQUES_POR_TIPO,
-  );
-  const canecas = amostrarDestaquesDoTipo(
-    lista.filter((p) => p.tipoProduto === TipoProduto.Caneca),
-    DESTAQUES_POR_TIPO,
-  );
-
-  return embaralhar([...camisetas, ...canecas]);
+  return selecionarDestaquesPorLinha(lista, categorias);
 };
 
 const Home = () => {
@@ -69,6 +48,21 @@ const Home = () => {
 
   const comFiltroCategoria = Boolean(categoriaPaiSelecionada || subcategoriaSelecionada);
 
+  const filtrarProdutosLocal = (
+    lista: Produto[],
+    cats: Categoria[],
+  ): Produto[] => {
+    if (subcategoriaSelecionada) {
+      return lista.filter((p) => p.categoriaId === subcategoriaSelecionada);
+    }
+    if (categoriaPaiSelecionada) {
+      const ids = new Set(getIdsSubcategorias(cats, categoriaPaiSelecionada));
+      ids.add(categoriaPaiSelecionada);
+      return lista.filter((p) => ids.has(p.categoriaId));
+    }
+    return lista;
+  };
+
   useEffect(() => {
     carregarLoja();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -76,10 +70,8 @@ const Home = () => {
 
   useEffect(() => {
     if (usandoDemo) {
-      const filtrados = subcategoriaSelecionada
-        ? produtosDemo.filter((p) => p.categoriaId === subcategoriaSelecionada)
-        : produtosDemo;
-      setProdutos(selecionarDestaques(filtrados, comFiltroCategoria));
+      const filtrados = filtrarProdutosLocal(produtosDemo, categorias);
+      setProdutos(selecionarDestaques(filtrados, comFiltroCategoria, categorias));
       return;
     }
 
@@ -88,11 +80,10 @@ const Home = () => {
   }, [categoriaPaiSelecionada, subcategoriaSelecionada, usandoDemo]);
 
   const aplicarDemo = () => {
-    setCategorias(categoriasDemo);
-    const filtrados = subcategoriaSelecionada
-      ? produtosDemo.filter((p) => p.categoriaId === subcategoriaSelecionada)
-      : produtosDemo;
-    setProdutos(selecionarDestaques(filtrados, comFiltroCategoria));
+    const cats = categoriasDemo;
+    setCategorias(cats);
+    const filtrados = filtrarProdutosLocal(produtosDemo, cats);
+    setProdutos(selecionarDestaques(filtrados, comFiltroCategoria, cats));
     setUsandoDemo(true);
   };
 
@@ -104,11 +95,12 @@ const Home = () => {
       ]);
 
       if (categoriasRes.data?.length > 0 && produtosRes.data?.length > 0) {
-        setCategorias(normalizarCategorias(categoriasRes.data));
+        const cats = normalizarCategorias(categoriasRes.data);
+        setCategorias(cats);
         const lista = produtosRes.data.map((p: Record<string, unknown>) =>
           normalizarProduto(p),
         );
-        setProdutos(selecionarDestaques(lista, false));
+        setProdutos(selecionarDestaques(lista, false, cats));
         setUsandoDemo(false);
         return;
       }
@@ -134,7 +126,7 @@ const Home = () => {
       const lista = (response.data ?? []).map((p: Record<string, unknown>) =>
         normalizarProduto(p),
       );
-      setProdutos(selecionarDestaques(lista, comFiltroCategoria));
+      setProdutos(selecionarDestaques(lista, comFiltroCategoria, categorias));
     } catch {
       aplicarDemo();
     }
@@ -192,7 +184,7 @@ const Home = () => {
               onClick={limparFiltros}
               className="category-pill"
             >
-              Todos
+              Variados
             </Nav.Link>
             {categoriasRaiz.map((cat) => (
               <Nav.Link
@@ -208,13 +200,6 @@ const Home = () => {
 
           {subcategorias.length > 0 && (
             <Nav className="category-pills category-pills-sub justify-content-center flex-wrap">
-              <Nav.Link
-                active={!subcategoriaSelecionada}
-                onClick={() => setSubcategoriaSelecionada("")}
-                className="category-pill category-pill-sub"
-              >
-                Tudo em {categoriasRaiz.find((c) => c.id === categoriaPaiSelecionada)?.nome}
-              </Nav.Link>
               {subcategorias.map((sub) => (
                 <Nav.Link
                   key={sub.id}

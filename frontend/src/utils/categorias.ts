@@ -1,4 +1,5 @@
 import { Categoria } from '../types';
+import type { Produto } from '../types';
 
 export const normalizarCategoria = (data: Record<string, unknown>): Categoria => {
   const paiId = data.categoriaPaiId ?? data.CategoriaPaiId;
@@ -32,13 +33,45 @@ export const getCategoriasFolha = (categorias: Categoria[]): Categoria[] =>
 
 export const getNomeCategoriaCompleto = (
   categoria: Categoria | undefined,
-  categorias: Categoria[]
+  categorias: Categoria[],
+  categoriaId?: string
 ): string => {
-  if (!categoria) return '-';
-  if (!categoria.categoriaPaiId) return categoria.nome;
-  const pai = categorias.find((c) => c.id === categoria.categoriaPaiId);
-  return pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome;
+  const cat =
+    (categoria?.id ? categorias.find((c) => c.id === categoria.id) : undefined) ??
+    (categoriaId ? categorias.find((c) => c.id === categoriaId) : undefined) ??
+    categoria;
+
+  if (!cat) return '-';
+  if (!cat.categoriaPaiId) return cat.nome;
+  const pai = categorias.find((c) => c.id === cat.categoriaPaiId);
+  return pai ? `${pai.nome} › ${cat.nome}` : cat.nome;
 };
 
 export const getIdsSubcategorias = (categorias: Categoria[], categoriaPaiId: string): string[] =>
   getSubcategorias(categorias, categoriaPaiId).map((c) => c.id);
+
+const obterDataCriacao = (produto: Produto) =>
+  produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
+
+/** Um produto mais recente por categoria principal (aba Variados). */
+export const selecionarDestaquesPorLinha = (
+  produtos: Produto[],
+  categorias: Categoria[],
+): Produto[] => {
+  const selecionados: Produto[] = [];
+
+  for (const pai of getCategoriasRaiz(categorias)) {
+    const idsCategoria = new Set(getIdsSubcategorias(categorias, pai.id));
+    idsCategoria.add(pai.id);
+
+    const maisRecente = produtos
+      .filter((p) => idsCategoria.has(p.categoriaId))
+      .sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a))[0];
+
+    if (maisRecente) {
+      selecionados.push(maisRecente);
+    }
+  }
+
+  return selecionados;
+};

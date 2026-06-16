@@ -414,6 +414,12 @@ const AdminProdutos = () => {
 
   const obterImagemProduto = (produto: Produto) => produto.imagens?.[0] ?? null;
 
+  const categoriaAtualDoProduto = (categoriaId: string) =>
+    categorias.find((c) => c.id === categoriaId);
+
+  const categoriaEhSubcategoria = (categoriaId: string) =>
+    Boolean(categoriaAtualDoProduto(categoriaId)?.categoriaPaiId);
+
   const rotuloImagemProduto = (produto: Produto) => {
     const img = obterImagemProduto(produto);
     if (!img) return 'Sem imagem';
@@ -493,7 +499,7 @@ const AdminProdutos = () => {
                             />
                           </td>
                           <td>{produto.nome}</td>
-                          <td>{getNomeCategoriaCompleto(produto.categoria, categorias)}</td>
+                          <td>{getNomeCategoriaCompleto(produto.categoria, categorias, produto.categoriaId)}</td>
                           <td>
                             <Badge bg="secondary">
                               {TIPO_PRODUTO_LABELS[produto.tipoProduto as TipoProduto] ?? produto.tipoProduto}
@@ -767,7 +773,7 @@ const AdminProdutos = () => {
                       <optgroup key={pai.id} label={pai.nome}>
                         {filhas.map((sub) => (
                           <option key={sub.id} value={sub.id}>
-                            {sub.nome}
+                            {pai.nome} › {sub.nome}
                           </option>
                         ))}
                       </optgroup>
@@ -775,16 +781,22 @@ const AdminProdutos = () => {
                   })}
                   {getCategoriasFolha(categorias).length === 0 &&
                     categorias
-                      .filter((c) => !c.categoriaPaiId)
+                      .filter((c) => !c.categoriaPaiId && c.ativo)
                       .map((cat) => (
                         <option key={cat.id} value={cat.id}>
-                          {cat.nome}
+                          {cat.nome} (categoria antiga)
                         </option>
                       ))}
                 </Form.Select>
                 <Form.Text className="text-muted">
-                  Cadastre o produto na subcategoria (ex.: Fé Católica › Camisetas).
+                  Cadastre o produto na subcategoria (ex.: Umbanda › Camisetas).
                 </Form.Text>
+                {produtoForm.categoriaId && !categoriaEhSubcategoria(produtoForm.categoriaId) && (
+                  <Form.Text className="text-warning d-block">
+                    Categoria atual: {getNomeCategoriaCompleto(undefined, categorias, produtoForm.categoriaId)}.
+                    Escolha uma opção com o nome da linha (ex.: Umbanda › Camisetas) e salve.
+                  </Form.Text>
+                )}
               </Form.Group>
               <Form.Group className="mb-3 col-md-6">
                 <Form.Label>Tipo de Produto *</Form.Label>

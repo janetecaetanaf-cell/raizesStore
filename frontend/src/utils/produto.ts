@@ -1,4 +1,5 @@
 import { Produto, TipoProduto, TamanhoProduto, CorProduto } from '../types';
+import { normalizarCategoria } from './categorias';
 
 export const normalizarProduto = (data: Record<string, unknown>): Produto => {
   const asArray = <T>(value: unknown): T[] =>
@@ -10,7 +11,11 @@ export const normalizarProduto = (data: Record<string, unknown>): Produto => {
     descricao: String(data.descricao ?? data.Descricao ?? ''),
     preco: Number(data.preco ?? data.Preco ?? 0),
     categoriaId: String(data.categoriaId ?? data.CategoriaId ?? ''),
-    categoria: (data.categoria ?? data.Categoria) as Produto['categoria'],
+    categoria: (() => {
+      const raw = data.categoria ?? data.Categoria;
+      if (!raw || typeof raw !== 'object') return undefined;
+      return normalizarCategoria(raw as Record<string, unknown>);
+    })(),
     tipoProduto: Number(data.tipoProduto ?? data.TipoProduto ?? TipoProduto.Outros) as TipoProduto,
     ativo: Boolean(data.ativo ?? data.Ativo ?? true),
     estoque: Number(data.estoque ?? data.Estoque ?? 0),
