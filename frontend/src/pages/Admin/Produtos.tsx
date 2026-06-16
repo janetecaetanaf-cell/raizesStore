@@ -4,7 +4,8 @@ import { FiPlus, FiEdit, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import api from '../../services/api';
 import { Categoria, Produto, TipoProduto, TamanhoProduto, CorProduto, TIPO_PRODUTO_LABELS } from '../../types';
 import { Icon } from '../../components/Icon';
-import { normalizarProduto } from '../../utils/produto';
+import { normalizarProduto, COR_PRODUTO_HEX, valoresEnumNumericos } from '../../utils/produto';
+import EnumMultiSelect from '../../components/EnumMultiSelect';
 
 const AdminProdutos = () => {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -206,6 +207,20 @@ const AdminProdutos = () => {
       }
       if (produtoForm.preco <= 0) {
         mostrarAlert('danger', 'O preço deve ser maior que zero');
+        return;
+      }
+      if (Number(produtoForm.tipoProduto) === TipoProduto.Camiseta) {
+        if (produtoForm.tamanhosDisponiveis.length === 0) {
+          mostrarAlert('danger', 'Selecione pelo menos um tamanho para a camiseta');
+          return;
+        }
+        if (produtoForm.coresDisponiveis.length === 0) {
+          mostrarAlert('danger', 'Selecione pelo menos uma cor para a camiseta');
+          return;
+        }
+      }
+      if (Number(produtoForm.tipoProduto) === TipoProduto.Caneca && produtoForm.coresDisponiveis.length === 0) {
+        mostrarAlert('danger', 'Selecione pelo menos uma cor para a caneca');
         return;
       }
 
@@ -719,60 +734,44 @@ const AdminProdutos = () => {
               </Form.Group>
             </div>
 
-            {produtoForm.tipoProduto === TipoProduto.Camiseta && (
+            {Number(produtoForm.tipoProduto) === TipoProduto.Camiseta && (
               <>
-                <Form.Group className="mb-3">
-                  <Form.Label>Tamanhos Disponíveis</Form.Label>
-                  <div className="d-flex flex-wrap gap-2">
-                    {Object.values(TamanhoProduto)
-                      .filter((t): t is TamanhoProduto => typeof t === 'number')
-                      .map((tamanho) => (
-                        <Form.Check
-                          key={tamanho}
-                          type="checkbox"
-                          label={TamanhoProduto[tamanho]}
-                          checked={produtoForm.tamanhosDisponiveis.includes(tamanho)}
-                          onChange={() => toggleTamanho(tamanho)}
-                        />
-                      ))}
-                  </div>
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Cores Disponíveis</Form.Label>
-                  <div className="d-flex flex-wrap gap-2">
-                    {Object.values(CorProduto)
-                      .filter((c): c is CorProduto => typeof c === 'number')
-                      .map((cor) => (
-                        <Form.Check
-                          key={cor}
-                          type="checkbox"
-                          label={CorProduto[cor]}
-                          checked={produtoForm.coresDisponiveis.includes(cor)}
-                          onChange={() => toggleCor(cor)}
-                        />
-                      ))}
-                  </div>
-                </Form.Group>
+                <EnumMultiSelect
+                  label="Tamanhos disponíveis *"
+                  hint="Clique para marcar ou desmarcar cada tamanho."
+                  opcoes={valoresEnumNumericos(TamanhoProduto).map((t) => ({
+                    value: t,
+                    label: TamanhoProduto[t as TamanhoProduto],
+                  }))}
+                  selecionados={produtoForm.tamanhosDisponiveis}
+                  onToggle={(t) => toggleTamanho(t as TamanhoProduto)}
+                />
+                <EnumMultiSelect
+                  label="Cores disponíveis *"
+                  hint="Clique para marcar ou desmarcar cada cor."
+                  opcoes={valoresEnumNumericos(CorProduto).map((c) => ({
+                    value: c,
+                    label: CorProduto[c as CorProduto],
+                    swatch: COR_PRODUTO_HEX[c as CorProduto],
+                  }))}
+                  selecionados={produtoForm.coresDisponiveis}
+                  onToggle={(c) => toggleCor(c as CorProduto)}
+                />
               </>
             )}
 
-            {produtoForm.tipoProduto === TipoProduto.Caneca && (
-              <Form.Group className="mb-3">
-                <Form.Label>Cores Disponíveis</Form.Label>
-                <div className="d-flex flex-wrap gap-2">
-                  {Object.values(CorProduto)
-                    .filter((c): c is CorProduto => typeof c === 'number')
-                    .map((cor) => (
-                      <Form.Check
-                        key={cor}
-                        type="checkbox"
-                        label={CorProduto[cor]}
-                        checked={produtoForm.coresDisponiveis.includes(cor)}
-                        onChange={() => toggleCor(cor)}
-                      />
-                    ))}
-                </div>
-              </Form.Group>
+            {Number(produtoForm.tipoProduto) === TipoProduto.Caneca && (
+              <EnumMultiSelect
+                label="Cores disponíveis *"
+                hint="Clique para marcar ou desmarcar cada cor."
+                opcoes={valoresEnumNumericos(CorProduto).map((c) => ({
+                  value: c,
+                  label: CorProduto[c as CorProduto],
+                  swatch: COR_PRODUTO_HEX[c as CorProduto],
+                }))}
+                selecionados={produtoForm.coresDisponiveis}
+                onToggle={(c) => toggleCor(c as CorProduto)}
+              />
             )}
 
             <Form.Group className="mb-3">

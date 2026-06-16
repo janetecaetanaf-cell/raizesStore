@@ -49,6 +49,17 @@ export const CORES_PADRAO_CAMISETA = [
 
 export const CORES_PADRAO_CANECA = [CorProduto.Branco, CorProduto.Preto, CorProduto.Azul];
 
+export const TAMANHOS_PADRAO_CAMISETA = [
+  TamanhoProduto.P,
+  TamanhoProduto.M,
+  TamanhoProduto.G,
+  TamanhoProduto.GG,
+];
+
+/** Valores numéricos de um enum TypeScript (ignora chaves string do mapeamento reverso). */
+export const valoresEnumNumericos = <E extends Record<string, string | number>>(enumObj: E): number[] =>
+  Object.values(enumObj).filter((v): v is number => typeof v === 'number');
+
 export const CAMISETA_PLACEHOLDER_DEFAULT = '/images/produtos/camiseta-sua-ideia-branca.png';
 
 export const CAMISETA_PLACEHOLDER_POR_COR: Partial<Record<CorProduto, string>> = {

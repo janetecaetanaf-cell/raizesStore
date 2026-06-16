@@ -17,6 +17,7 @@ import {
   COR_PRODUTO_HEX,
   CORES_PADRAO_CAMISETA,
   CORES_PADRAO_CANECA,
+  TAMANHOS_PADRAO_CAMISETA,
 } from '../utils/produto';
 
 const ProdutoDetalhes = () => {
@@ -65,13 +66,20 @@ const ProdutoDetalhes = () => {
     return [];
   }, [produto, tipo]);
 
+  const tamanhosDisponiveis = useMemo(() => {
+    if (!produto) return [];
+    if (produto.tamanhosDisponiveis.length > 0) return produto.tamanhosDisponiveis;
+    if (tipo === TipoProduto.Camiseta) return TAMANHOS_PADRAO_CAMISETA;
+    return [];
+  }, [produto, tipo]);
+
   const opcoesTamanho = useMemo(
     () =>
-      (produto?.tamanhosDisponiveis ?? []).map((t) => ({
+      tamanhosDisponiveis.map((t) => ({
         value: t,
         label: TamanhoProduto[t],
       })),
-    [produto]
+    [tamanhosDisponiveis]
   );
 
   const opcoesCor = useMemo(
