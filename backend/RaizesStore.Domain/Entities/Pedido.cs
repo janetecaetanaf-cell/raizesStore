@@ -111,7 +111,7 @@ public class Pedido : Entity
         }
 
         Status = StatusPedido.Pago;
-        DataPagamento = DateTimeOffset.UtcNow.DateTime;
+        DataPagamento = DateTime.UtcNow;
         SetUpdateAt();
     }
 
@@ -123,7 +123,7 @@ public class Pedido : Entity
         }
 
         Status = StatusPedido.Enviado;
-        DataEnvio = DateTimeOffset.UtcNow.DateTime;
+        DataEnvio = DateTime.UtcNow;
         CodigoRastreamento = codigoRastreamento;
         SetUpdateAt();
     }
@@ -136,7 +136,7 @@ public class Pedido : Entity
         }
 
         Status = StatusPedido.Entregue;
-        DataEntrega = DateTimeOffset.UtcNow.DateTime;
+        DataEntrega = DateTime.UtcNow;
         SetUpdateAt();
     }
 

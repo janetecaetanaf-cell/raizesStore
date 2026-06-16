@@ -173,46 +173,82 @@ public class PedidosController : ControllerBase
     [HttpPost("{id}/confirmar-pagamento")]
     public async Task<IActionResult> ConfirmarPagamento(Guid id)
     {
-        var pedido = await _context.Pedidos.FindAsync(id);
-        if (pedido == null || pedido.DeletedAt != null)
+        try
         {
-            return NotFound();
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null || pedido.DeletedAt != null)
+            {
+                return NotFound(new { message = "Pedido não encontrado." });
+            }
+
+            pedido.ConfirmarPagamento();
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
-
-        pedido.ConfirmarPagamento();
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            var detalhe = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { message = $"Erro ao confirmar pagamento: {detalhe}" });
+        }
     }
 
     [HttpPost("{id}/enviar")]
     public async Task<IActionResult> EnviarPedido(Guid id, EnviarPedidoDto dto)
     {
-        var pedido = await _context.Pedidos.FindAsync(id);
-        if (pedido == null || pedido.DeletedAt != null)
+        try
         {
-            return NotFound();
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null || pedido.DeletedAt != null)
+            {
+                return NotFound(new { message = "Pedido não encontrado." });
+            }
+
+            pedido.Enviar(dto.CodigoRastreamento);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
-
-        pedido.Enviar(dto.CodigoRastreamento);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            var detalhe = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { message = $"Erro ao marcar envio: {detalhe}" });
+        }
     }
 
     [HttpPost("{id}/entregue")]
     public async Task<IActionResult> MarcarComoEntregue(Guid id)
     {
-        var pedido = await _context.Pedidos.FindAsync(id);
-        if (pedido == null || pedido.DeletedAt != null)
+        try
         {
-            return NotFound();
+            var pedido = await _context.Pedidos.FindAsync(id);
+            if (pedido == null || pedido.DeletedAt != null)
+            {
+                return NotFound(new { message = "Pedido não encontrado." });
+            }
+
+            pedido.MarcarComoEntregue();
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
-
-        pedido.MarcarComoEntregue();
-        await _context.SaveChangesAsync();
-
-        return NoContent();
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            var detalhe = ex.InnerException?.Message ?? ex.Message;
+            return BadRequest(new { message = $"Erro ao marcar entrega: {detalhe}" });
+        }
     }
 }
 
