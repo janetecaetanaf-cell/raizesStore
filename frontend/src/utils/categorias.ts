@@ -92,3 +92,59 @@ export const selecionarDestaquesPorLinha = (
 
   return selecionados;
 };
+
+const embaralhar = <T>(lista: T[]): T[] =>
+  [...lista].sort(() => Math.random() - 0.5);
+
+/** Destaques Variados: sorteia produtos misturando camisetas, canecas e outros. */
+export const selecionarDestaquesAleatorios = (
+  produtos: Produto[],
+  limite: number,
+): Produto[] => {
+  if (produtos.length <= limite) {
+    return embaralhar(produtos);
+  }
+
+  const selecionados: Produto[] = [];
+  const idsUsados = new Set<string>();
+
+  const tirar = (fonte: Produto[], quantidade: number) => {
+    for (const produto of embaralhar(fonte)) {
+      if (selecionados.length >= limite || quantidade <= 0) break;
+      if (idsUsados.has(produto.id)) continue;
+      selecionados.push(produto);
+      idsUsados.add(produto.id);
+      quantidade -= 1;
+    }
+  };
+
+  const camisetas = produtos.filter((p) => p.tipoProduto === TipoProduto.Camiseta);
+  const canecas = produtos.filter((p) => p.tipoProduto === TipoProduto.Caneca);
+  const outros = produtos.filter(
+    (p) => p.tipoProduto !== TipoProduto.Camiseta && p.tipoProduto !== TipoProduto.Caneca,
+  );
+
+  let metaCamiseta = Math.min(camisetas.length, Math.max(1, Math.floor(limite / 2)));
+  let metaCaneca = Math.min(canecas.length, Math.max(1, Math.ceil(limite / 2)));
+
+  if (camisetas.length === 0) {
+    metaCamiseta = 0;
+    metaCaneca = Math.min(canecas.length, limite);
+  } else if (canecas.length === 0) {
+    metaCaneca = 0;
+    metaCamiseta = Math.min(camisetas.length, limite);
+  }
+
+  while (metaCamiseta + metaCaneca > limite) {
+    if (metaCamiseta >= metaCaneca && metaCamiseta > 0) metaCamiseta -= 1;
+    else if (metaCaneca > 0) metaCaneca -= 1;
+  }
+
+  tirar(camisetas, metaCamiseta);
+  tirar(canecas, metaCaneca);
+
+  const restante = produtos.filter((p) => !idsUsados.has(p.id));
+  tirar(restante, limite - selecionados.length);
+
+  return embaralhar(selecionados);
+};

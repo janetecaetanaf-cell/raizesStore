@@ -9,17 +9,12 @@ import {
   getCategoriasRaiz,
   getSubcategorias,
   normalizarCategorias,
+  selecionarDestaquesAleatorios,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
 
 const LIMITE_DESTAQUES = 8;
-
-const obterDataCriacao = (produto: Produto) =>
-  produto.createdAt ? new Date(produto.createdAt).getTime() : 0;
-
-const selecionarUltimosProdutos = (lista: Produto[], limite: number): Produto[] =>
-  [...lista].sort((a, b) => obterDataCriacao(b) - obterDataCriacao(a)).slice(0, limite);
 
 const Home = () => {
   const [destaques, setDestaques] = useState<Produto[]>([]);
@@ -55,7 +50,7 @@ const Home = () => {
       try {
         const [categoriasRes, destaquesRes] = await Promise.all([
           api.get("/categorias"),
-          api.get("/produtos", { params: { limite: LIMITE_DESTAQUES, recentes: true } }),
+          api.get("/produtos", { params: { limite: LIMITE_DESTAQUES, aleatorios: true } }),
         ]);
 
         if (!ativo) return;
@@ -71,7 +66,7 @@ const Home = () => {
           setUsandoDemo(false);
         } else {
           setCategorias(categoriasDemo);
-          setDestaques(selecionarUltimosProdutos(produtosDemo, LIMITE_DESTAQUES));
+          setDestaques(selecionarDestaquesAleatorios(produtosDemo, LIMITE_DESTAQUES));
           setUsandoDemo(true);
         }
         setCategoriaPaiSelecionada("");
@@ -80,7 +75,7 @@ const Home = () => {
       } catch {
         if (!ativo) return;
         setCategorias(categoriasDemo);
-        setDestaques(selecionarUltimosProdutos(produtosDemo, LIMITE_DESTAQUES));
+        setDestaques(selecionarDestaquesAleatorios(produtosDemo, LIMITE_DESTAQUES));
         setUsandoDemo(true);
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");

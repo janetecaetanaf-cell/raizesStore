@@ -22,12 +22,14 @@ public class ProdutosController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos(
+    public async Task<IActionResult> GetProdutos(
         [FromQuery] Guid? categoriaId,
         [FromQuery] Guid? categoriaPaiId,
         [FromQuery] TipoProduto? tipoProduto,
         [FromQuery] bool incluirInativos = false,
         [FromQuery] bool recentes = false,
+        [FromQuery] bool aleatorios = false,
+        [FromQuery] bool somenteCapa = false,
         [FromQuery] int? limite = null)
     {
         if (incluirInativos && !_adminOptions.IsAdmin(Request.Headers["X-User-Email"].FirstOrDefault()))
@@ -63,6 +65,13 @@ public class ProdutosController : ControllerBase
             query = query.Where(p => p.TipoProduto == tipoProduto.Value);
         }
 
+        if (aleatorios && limite.HasValue)
+        {
+            var pool = await query.ToListAsync();
+            var destaques = SelecionarDestaquesAleatorios(pool, Math.Clamp(limite.Value, 1, 50));
+            return Ok(somenteCapa ? destaques.Select(ProdutoResumoHelper.ParaListagem) : destaques);
+        }
+
         query = recentes || limite.HasValue
             ? query.OrderByDescending(p => p.CreatedAt)
             : query.OrderBy(p => p.Nome);
@@ -72,7 +81,75 @@ public class ProdutosController : ControllerBase
             query = query.Take(Math.Clamp(limite.Value, 1, 50));
         }
 
-        return await query.ToListAsync();
+        var resultado = await query.ToListAsync();
+        return Ok(somenteCapa ? resultado.Select(ProdutoResumoHelper.ParaListagem) : resultado);
+    }
+
+    private static List<Produto> SelecionarDestaquesAleatorios(IReadOnlyList<Produto> pool, int limite)
+    {
+        if (pool.Count <= limite)
+        {
+            return pool.OrderBy(_ => Random.Shared.Next()).ToList();
+        }
+
+        var selecionados = new List<Produto>();
+        var usados = new HashSet<Guid>();
+
+        void Tirar(IEnumerable<Produto> fonte, int quantidade)
+        {
+            foreach (var produto in fonte.OrderBy(_ => Random.Shared.Next()))
+            {
+                if (selecionados.Count >= limite || quantidade <= 0)
+                {
+                    break;
+                }
+
+                if (!usados.Add(produto.Id))
+                {
+                    continue;
+                }
+
+                selecionados.Add(produto);
+                quantidade--;
+            }
+        }
+
+        var camisetas = pool.Where(p => p.TipoProduto == TipoProduto.Camiseta).ToList();
+        var canecas = pool.Where(p => p.TipoProduto == TipoProduto.Caneca).ToList();
+
+        var metaCamiseta = Math.Min(camisetas.Count, Math.Max(1, limite / 2));
+        var metaCaneca = Math.Min(canecas.Count, Math.Max(1, limite / 2));
+
+        if (camisetas.Count == 0)
+        {
+            metaCamiseta = 0;
+            metaCaneca = Math.Min(canecas.Count, limite);
+        }
+        else if (canecas.Count == 0)
+        {
+            metaCaneca = 0;
+            metaCamiseta = Math.Min(camisetas.Count, limite);
+        }
+
+        while (metaCamiseta + metaCaneca > limite)
+        {
+            if (metaCamiseta >= metaCaneca && metaCamiseta > 0)
+            {
+                metaCamiseta--;
+            }
+            else if (metaCaneca > 0)
+            {
+                metaCaneca--;
+            }
+        }
+
+        Tirar(camisetas, metaCamiseta);
+        Tirar(canecas, metaCaneca);
+
+        var restante = pool.Where(p => !usados.Contains(p.Id));
+        Tirar(restante, limite - selecionados.Count);
+
+        return selecionados.OrderBy(_ => Random.Shared.Next()).ToList();
     }
 
     [HttpGet("{id}")]
@@ -251,4 +328,34 @@ public class ImagemPorCorDto
 {
     public CorProduto Cor { get; set; }
     public string Url { get; set; } = string.Empty;
+}
+
+internal static class ProdutoResumoHelper
+{
+    public static object ParaListagem(Produto produto)
+    {
+        var capa = produto.Imagens
+            .FirstOrDefault(i =>
+                !string.IsNullOrWhiteSpace(i) &&
+                !i.StartsWith("data:", StringComparison.OrdinalIgnoreCase));
+
+        return new
+        {
+            produto.Id,
+            produto.Nome,
+            produto.Descricao,
+            produto.Preco,
+            produto.CategoriaId,
+            produto.Categoria,
+            produto.TipoProduto,
+            produto.Ativo,
+            produto.Estoque,
+            produto.TamanhosDisponiveis,
+            produto.CoresDisponiveis,
+            Imagens = capa != null ? new List<string> { capa } : new List<string>(),
+            ImagensPorCor = new Dictionary<CorProduto, string>(),
+            produto.CreatedAt,
+            produto.UpdatedAt,
+        };
+    }
 }

@@ -61,7 +61,7 @@ const AdminProdutos = () => {
     try {
       const [categoriasRes, produtosRes] = await Promise.all([
         api.get('/categorias'),
-        api.get('/produtos', { params: { incluirInativos: true } }),
+        api.get('/produtos', { params: { incluirInativos: true, somenteCapa: true } }),
       ]);
       console.log('Categorias carregadas:', categoriasRes.data);
       console.log('Produtos carregados:', produtosRes.data);
@@ -207,39 +207,50 @@ const AdminProdutos = () => {
   };
 
   // ========== PRODUTOS ==========
-  const abrirModalProduto = (produto?: Produto) => {
+  const preencherFormularioProduto = (produto: Produto) => {
+    setProdutoEditando(produto);
+    setProdutoForm({
+      nome: produto.nome,
+      descricao: produto.descricao || '',
+      preco: produto.preco,
+      categoriaId: produto.categoriaId,
+      tipoProduto: produto.tipoProduto,
+      ativo: produto.ativo,
+      estoque: produto.estoque,
+      tamanhosDisponiveis: [...produto.tamanhosDisponiveis],
+      coresDisponiveis: [...produto.coresDisponiveis],
+      imagens: [...produto.imagens],
+      imagensPorCor: { ...(produto.imagensPorCor ?? {}) },
+    });
+  };
+
+  const abrirModalProduto = async (produto?: Produto) => {
     liberarBlobUrls(produtoForm.imagens);
     if (produto) {
-      setProdutoEditando(produto);
-      setProdutoForm({
-        nome: produto.nome,
-        descricao: produto.descricao || '',
-        preco: produto.preco,
-        categoriaId: produto.categoriaId,
-        tipoProduto: produto.tipoProduto,
-        ativo: produto.ativo,
-        estoque: produto.estoque,
-        tamanhosDisponiveis: [...produto.tamanhosDisponiveis],
-        coresDisponiveis: [...produto.coresDisponiveis],
-        imagens: [...produto.imagens],
-        imagensPorCor: { ...(produto.imagensPorCor ?? {}) },
-      });
-    } else {
-      setProdutoEditando(null);
-      setProdutoForm({
-        nome: '',
-        descricao: '',
-        preco: 0,
-        categoriaId: obterCategoriaPadraoProduto(),
-        tipoProduto: TipoProduto.Camiseta,
-        ativo: true,
-        estoque: 0,
-        tamanhosDisponiveis: [],
-        coresDisponiveis: [],
-        imagens: [],
-        imagensPorCor: {},
-      });
+      setShowProdutoModal(true);
+      try {
+        const response = await api.get(`/produtos/${produto.id}`);
+        preencherFormularioProduto(normalizarProduto(response.data));
+      } catch {
+        preencherFormularioProduto(produto);
+      }
+      return;
     }
+
+    setProdutoEditando(null);
+    setProdutoForm({
+      nome: '',
+      descricao: '',
+      preco: 0,
+      categoriaId: obterCategoriaPadraoProduto(),
+      tipoProduto: TipoProduto.Camiseta,
+      ativo: true,
+      estoque: 0,
+      tamanhosDisponiveis: [],
+      coresDisponiveis: [],
+      imagens: [],
+      imagensPorCor: {},
+    });
     setShowProdutoModal(true);
   };
 
