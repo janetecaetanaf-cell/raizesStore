@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Container, Row, Col, Nav, Spinner } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { Produto, Categoria } from "../types";
 import { produtosDemo, categoriasDemo } from "../data/demoProdutos";
@@ -9,12 +9,10 @@ import {
   getCategoriasRaiz,
   getSubcategorias,
   normalizarCategorias,
-  selecionarDestaquesAleatorios,
+  selecionarDestaquesPersonalizados,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
-
-const LIMITE_DESTAQUES = 8;
 
 const Home = () => {
   const [destaques, setDestaques] = useState<Produto[]>([]);
@@ -26,6 +24,7 @@ const Home = () => {
   const [carregandoInicial, setCarregandoInicial] = useState(true);
   const [carregandoCategoria, setCarregandoCategoria] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const categoriasRaiz = useMemo(() => getCategoriasRaiz(categorias), [categorias]);
   const subcategorias = useMemo(
@@ -50,7 +49,7 @@ const Home = () => {
       try {
         const [categoriasRes, destaquesRes] = await Promise.all([
           api.get("/categorias"),
-          api.get("/produtos", { params: { limite: LIMITE_DESTAQUES, aleatorios: true } }),
+          api.get("/produtos", { params: { destaquesPersonalizados: true, somenteCapa: true } }),
         ]);
 
         if (!ativo) return;
@@ -66,7 +65,7 @@ const Home = () => {
           setUsandoDemo(false);
         } else {
           setCategorias(categoriasDemo);
-          setDestaques(selecionarDestaquesAleatorios(produtosDemo, LIMITE_DESTAQUES));
+          setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
           setUsandoDemo(true);
         }
         setCategoriaPaiSelecionada("");
@@ -75,7 +74,7 @@ const Home = () => {
       } catch {
         if (!ativo) return;
         setCategorias(categoriasDemo);
-        setDestaques(selecionarDestaquesAleatorios(produtosDemo, LIMITE_DESTAQUES));
+        setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
         setUsandoDemo(true);
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
@@ -93,6 +92,15 @@ const Home = () => {
       ativo = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (location.pathname === "/" && (location.state as { reset?: boolean })?.reset) {
+      setCategoriaPaiSelecionada("");
+      setSubcategoriaSelecionada("");
+      setProdutosSubcategoria([]);
+      navigate(".", { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     if (!subcategoriaSelecionada || usandoDemo) {
@@ -137,12 +145,12 @@ const Home = () => {
   }, [subcategoriaSelecionada, usandoDemo]);
 
   const selecionarCategoriaRaiz = (id: string) => {
+    if (categoriaPaiSelecionada === id && !subcategoriaSelecionada) {
+      setCategoriaPaiSelecionada("");
+      setSubcategoriaSelecionada("");
+      return;
+    }
     setCategoriaPaiSelecionada(id);
-    setSubcategoriaSelecionada("");
-  };
-
-  const limparFiltros = () => {
-    setCategoriaPaiSelecionada("");
     setSubcategoriaSelecionada("");
   };
 
@@ -183,13 +191,6 @@ const Home = () => {
       <section className="categories-nav">
         <Container>
           <Nav className="category-pills justify-content-center flex-wrap mb-2">
-            <Nav.Link
-              active={!categoriaPaiSelecionada}
-              onClick={limparFiltros}
-              className="category-pill"
-            >
-              Variados
-            </Nav.Link>
             {categoriasRaiz.map((cat) => (
               <Nav.Link
                 key={cat.id}

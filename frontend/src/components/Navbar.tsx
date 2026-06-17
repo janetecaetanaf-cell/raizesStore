@@ -24,7 +24,7 @@ const Navbar = () => {
       {!isAdminRoute && <AnnouncementBar />}
       <BootstrapNavbar expand="lg" className="store-navbar sticky-top">
         <Container>
-          <BootstrapNavbar.Brand as={Link} to="/" className="store-brand">
+          <BootstrapNavbar.Brand as={Link} to="/" state={{ reset: true }} className="store-brand">
             <img
               src="/images/logo-raizes-circulo.png"
               alt="Raízes Estampas"
@@ -42,7 +42,7 @@ const Navbar = () => {
             <Nav className="mx-auto store-nav-links">
               {!isAdminRoute ? (
                 <>
-                  <Nav.Link as={Link} to="/">Início</Nav.Link>
+                  <Nav.Link as={Link} to="/" state={{ reset: true }}>Início</Nav.Link>
                   <NavDropdown title="Produtos" id="nav-produtos">
                     <NavDropdown.Item as={Link} to="/#destaques">Ver catálogo</NavDropdown.Item>
                     <NavDropdown.Divider />

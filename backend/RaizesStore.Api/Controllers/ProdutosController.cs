@@ -28,7 +28,7 @@ public class ProdutosController : ControllerBase
         [FromQuery] TipoProduto? tipoProduto,
         [FromQuery] bool incluirInativos = false,
         [FromQuery] bool recentes = false,
-        [FromQuery] bool aleatorios = false,
+        [FromQuery] bool destaquesPersonalizados = false,
         [FromQuery] bool somenteCapa = false,
         [FromQuery] int? limite = null)
     {
@@ -65,11 +65,9 @@ public class ProdutosController : ControllerBase
             query = query.Where(p => p.TipoProduto == tipoProduto.Value);
         }
 
-        if (aleatorios && limite.HasValue)
+        if (destaquesPersonalizados)
         {
-            var pool = await query.ToListAsync();
-            var destaques = SelecionarDestaquesAleatorios(pool, Math.Clamp(limite.Value, 1, 50));
-            return Ok(somenteCapa ? destaques.Select(ProdutoResumoHelper.ParaListagem) : destaques);
+            return await BuscarDestaquesPersonalizadosAsync(somenteCapa);
         }
 
         query = recentes || limite.HasValue
@@ -85,71 +83,48 @@ public class ProdutosController : ControllerBase
         return Ok(somenteCapa ? resultado.Select(ProdutoResumoHelper.ParaListagem) : resultado);
     }
 
-    private static List<Produto> SelecionarDestaquesAleatorios(IReadOnlyList<Produto> pool, int limite)
+    private async Task<IActionResult> BuscarDestaquesPersonalizadosAsync(bool somenteCapa)
     {
-        if (pool.Count <= limite)
+        const int limiteCamisetas = 4;
+        const int limiteCanecas = 4;
+
+        var pai = await _context.Categorias
+            .Where(c => c.DeletedAt == null && c.Ativo && c.CategoriaPaiId == null)
+            .OrderBy(c => c.Ordem)
+            .FirstOrDefaultAsync(c => EF.Functions.ILike(c.Nome, "%personaliz%"));
+
+        IQueryable<Produto> baseQuery = _context.Produtos
+            .Include(p => p.Categoria)
+            .Where(p => p.DeletedAt == null && p.Ativo);
+
+        if (pai != null)
         {
-            return pool.OrderBy(_ => Random.Shared.Next()).ToList();
+            var idsLinha = await _context.Categorias
+                .Where(c => c.DeletedAt == null && c.Ativo && (c.Id == pai.Id || c.CategoriaPaiId == pai.Id))
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            baseQuery = baseQuery.Where(p => idsLinha.Contains(p.CategoriaId));
         }
 
-        var selecionados = new List<Produto>();
-        var usados = new HashSet<Guid>();
+        var camisetas = await baseQuery
+            .Where(p => p.TipoProduto == TipoProduto.Camiseta)
+            .OrderBy(_ => Guid.NewGuid())
+            .Take(limiteCamisetas)
+            .ToListAsync();
 
-        void Tirar(IEnumerable<Produto> fonte, int quantidade)
-        {
-            foreach (var produto in fonte.OrderBy(_ => Random.Shared.Next()))
-            {
-                if (selecionados.Count >= limite || quantidade <= 0)
-                {
-                    break;
-                }
+        var canecas = await baseQuery
+            .Where(p => p.TipoProduto == TipoProduto.Caneca)
+            .OrderBy(_ => Guid.NewGuid())
+            .Take(limiteCanecas)
+            .ToListAsync();
 
-                if (!usados.Add(produto.Id))
-                {
-                    continue;
-                }
+        var destaques = camisetas
+            .Concat(canecas)
+            .OrderBy(_ => Random.Shared.Next())
+            .ToList();
 
-                selecionados.Add(produto);
-                quantidade--;
-            }
-        }
-
-        var camisetas = pool.Where(p => p.TipoProduto == TipoProduto.Camiseta).ToList();
-        var canecas = pool.Where(p => p.TipoProduto == TipoProduto.Caneca).ToList();
-
-        var metaCamiseta = Math.Min(camisetas.Count, Math.Max(1, limite / 2));
-        var metaCaneca = Math.Min(canecas.Count, Math.Max(1, limite / 2));
-
-        if (camisetas.Count == 0)
-        {
-            metaCamiseta = 0;
-            metaCaneca = Math.Min(canecas.Count, limite);
-        }
-        else if (canecas.Count == 0)
-        {
-            metaCaneca = 0;
-            metaCamiseta = Math.Min(camisetas.Count, limite);
-        }
-
-        while (metaCamiseta + metaCaneca > limite)
-        {
-            if (metaCamiseta >= metaCaneca && metaCamiseta > 0)
-            {
-                metaCamiseta--;
-            }
-            else if (metaCaneca > 0)
-            {
-                metaCaneca--;
-            }
-        }
-
-        Tirar(camisetas, metaCamiseta);
-        Tirar(canecas, metaCaneca);
-
-        var restante = pool.Where(p => !usados.Contains(p.Id));
-        Tirar(restante, limite - selecionados.Count);
-
-        return selecionados.OrderBy(_ => Random.Shared.Next()).ToList();
+        return Ok(somenteCapa ? destaques.Select(ProdutoResumoHelper.ParaListagem) : destaques);
     }
 
     [HttpGet("{id}")]

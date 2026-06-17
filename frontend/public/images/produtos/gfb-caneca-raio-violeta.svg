@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 480" role="img" aria-label="Caneca Coleção GFB Raio Violeta">
+  <defs>
+    <linearGradient id="mug" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f8f8f8"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ececec"/>
+    </linearGradient>
+    <linearGradient id="violetFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="400" height="480" fill="#1a1a2e"/>
+  <text x="200" y="32" text-anchor="middle" fill="#c9b896" font-family="Georgia, serif" font-size="13" letter-spacing="2">COLEÇÃO GFB</text>
+  <text x="200" y="52" text-anchor="middle" fill="#a78bfa" font-family="Georgia, serif" font-size="11" letter-spacing="1">RAIO VIOLETA</text>
+
+  <!-- Caneca -->
+  <path d="M95 95 L95 380 Q95 400 115 400 L255 400 Q275 400 275 380 L275 95 Z" fill="url(#mug)" stroke="#ccc" stroke-width="2"/>
+  <path d="M275 140 Q320 150 320 220 Q320 290 275 300" fill="none" stroke="#ccc" stroke-width="12" stroke-linecap="round"/>
+  <ellipse cx="185" cy="95" rx="90" ry="14" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+
+  <!-- Chama violeta -->
+  <g transform="translate(185 175)" filter="url(#glow)">
+    <path d="M0,60 Q-28,20 -18,-25 Q-8,-55 0,-70 Q8,-55 18,-25 Q28,20 0,60 Z" fill="url(#violetFlame)" opacity="0.95"/>
+    <path d="M0,45 Q-12,15 -6,-15 Q0,-35 6,-15 Q12,15 0,45 Z" fill="#ede9fe" opacity="0.85"/>
+  </g>
+
+  <!-- Decreto -->
+  <foreignObject x="108" y="248" width="154" height="145">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Georgia, serif; font-size: 9.5px; line-height: 1.45; color: #3b0764; text-align: center; font-weight: 600;">
+      <p style="margin: 0 0 8px;">EU SOU a Chama Violeta em ação em mim agora.</p>
+      <p style="margin: 0 0 8px;">EU SOU a Chama Violeta transmutando toda energia densa.</p>
+      <p style="margin: 0;">EU SOU a Chama Violeta da liberdade e da luz!</p>
+    </div>
+  </foreignObject>
+
+  <text x="200" y="430" text-anchor="middle" fill="#7c3aed" font-family="sans-serif" font-size="10" font-weight="700">Transmutação · Liberdade · Perdão</text>
+  <text x="200" y="448" text-anchor="middle" fill="#888" font-size="8">Mestre Saint Germain · Arcanjo Ezequiel</text>
+</svg>
