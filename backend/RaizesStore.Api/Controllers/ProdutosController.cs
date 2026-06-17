@@ -107,17 +107,23 @@ public class ProdutosController : ControllerBase
             baseQuery = baseQuery.Where(p => idsLinha.Contains(p.CategoriaId));
         }
 
-        var camisetas = await baseQuery
+        var camisetas = (await baseQuery
             .Where(p => p.TipoProduto == TipoProduto.Camiseta)
-            .OrderBy(_ => Guid.NewGuid())
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(limiteCamisetas * 3)
+            .ToListAsync())
+            .OrderBy(_ => Random.Shared.Next())
             .Take(limiteCamisetas)
-            .ToListAsync();
+            .ToList();
 
-        var canecas = await baseQuery
+        var canecas = (await baseQuery
             .Where(p => p.TipoProduto == TipoProduto.Caneca)
-            .OrderBy(_ => Guid.NewGuid())
+            .OrderByDescending(p => p.CreatedAt)
+            .Take(limiteCanecas * 3)
+            .ToListAsync())
+            .OrderBy(_ => Random.Shared.Next())
             .Take(limiteCanecas)
-            .ToListAsync();
+            .ToList();
 
         var destaques = camisetas
             .Concat(canecas)
@@ -309,10 +315,7 @@ internal static class ProdutoResumoHelper
 {
     public static object ParaListagem(Produto produto)
     {
-        var capa = produto.Imagens
-            .FirstOrDefault(i =>
-                !string.IsNullOrWhiteSpace(i) &&
-                !i.StartsWith("data:", StringComparison.OrdinalIgnoreCase));
+        var capa = produto.Imagens.FirstOrDefault(i => !string.IsNullOrWhiteSpace(i));
 
         return new
         {

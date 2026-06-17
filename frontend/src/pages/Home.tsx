@@ -9,7 +9,7 @@ import {
   getCategoriasRaiz,
   getSubcategorias,
   normalizarCategorias,
-  selecionarDestaquesPersonalizados,
+  selecionarDestaquesPorLinha,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
@@ -47,25 +47,25 @@ const Home = () => {
     const carregarInicio = async () => {
       setCarregandoInicial(true);
       try {
-        const [categoriasRes, destaquesRes] = await Promise.all([
+        const [categoriasRes, produtosRes] = await Promise.all([
           api.get("/categorias"),
-          api.get("/produtos", { params: { destaquesPersonalizados: true, somenteCapa: true } }),
+          api.get("/produtos"),
         ]);
 
         if (!ativo) return;
 
         const cats = normalizarCategorias(categoriasRes.data ?? []);
-        const lista = (destaquesRes.data ?? []).map((p: Record<string, unknown>) =>
+        const lista = (produtosRes.data ?? []).map((p: Record<string, unknown>) =>
           normalizarProduto(p),
         );
 
         if (cats.length > 0) {
           setCategorias(cats);
-          setDestaques(lista);
+          setDestaques(selecionarDestaquesPorLinha(lista, cats));
           setUsandoDemo(false);
         } else {
           setCategorias(categoriasDemo);
-          setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
+          setDestaques(selecionarDestaquesPorLinha(produtosDemo, categoriasDemo));
           setUsandoDemo(true);
         }
         setCategoriaPaiSelecionada("");
@@ -74,7 +74,7 @@ const Home = () => {
       } catch {
         if (!ativo) return;
         setCategorias(categoriasDemo);
-        setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
+        setDestaques(selecionarDestaquesPorLinha(produtosDemo, categoriasDemo));
         setUsandoDemo(true);
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
