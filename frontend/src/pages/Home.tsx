@@ -9,7 +9,7 @@ import {
   getCategoriasRaiz,
   getSubcategorias,
   normalizarCategorias,
-  selecionarDestaquesPorLinha,
+  selecionarDestaquesPersonalizados,
 } from "../utils/categorias";
 import ProductCard from "../components/ProductCard";
 import TrustSection from "../components/TrustSection";
@@ -61,11 +61,11 @@ const Home = () => {
 
         if (cats.length > 0) {
           setCategorias(cats);
-          setDestaques(selecionarDestaquesPorLinha(lista, cats));
+          setDestaques(selecionarDestaquesPersonalizados(lista, cats));
           setUsandoDemo(false);
         } else {
           setCategorias(categoriasDemo);
-          setDestaques(selecionarDestaquesPorLinha(produtosDemo, categoriasDemo));
+          setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
           setUsandoDemo(true);
         }
         setCategoriaPaiSelecionada("");
@@ -74,7 +74,7 @@ const Home = () => {
       } catch {
         if (!ativo) return;
         setCategorias(categoriasDemo);
-        setDestaques(selecionarDestaquesPorLinha(produtosDemo, categoriasDemo));
+        setDestaques(selecionarDestaquesPersonalizados(produtosDemo, categoriasDemo));
         setUsandoDemo(true);
         setCategoriaPaiSelecionada("");
         setSubcategoriaSelecionada("");
